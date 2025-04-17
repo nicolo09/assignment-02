@@ -1,5 +1,6 @@
 package pcd.ass02.library;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,9 +22,9 @@ public class DependencyAnalyzer {
     public Future<ClassDepsReport> getClassDependencies(final String classSrcFile) {
 
         Promise<ClassDepsReport> classPromise = Promise.promise();
-
         FileSystem fs = Vertx.vertx().fileSystem();
 
+        var classPath = classSrcFile.substring(0, classSrcFile.lastIndexOf(File.separator));
         fs.exists(classSrcFile)
         .compose((Boolean result) -> {
             //TODO: Check if the file exists, this code is not correct right now
@@ -33,36 +34,40 @@ public class DependencyAnalyzer {
             // Process the file content and generate the ClassDepsReport
             //TODO: Are import the only dependencies we need to check? NO, class in the same package are not imported
             if (buffer.succeeded()) {
+                List<String> dependencies = new ArrayList<>();
                 try {
-                    String content = buffer.result().toString();
-                    var compilationUnit = StaticJavaParser.parse(content);
+                    // Parse the class source file
+                    var compilationUnit = StaticJavaParser.parse(buffer.result().toString());
+
+                    // Collect imported classes
+                    for (ImportDeclaration importDecl : compilationUnit.findAll(ImportDeclaration.class)) {
+                        dependencies.add(importDecl.getNameAsString());
+                    }
                     
-                    // Extract import declarations
-                    List<ImportDeclaration> imports = compilationUnit.findAll(ImportDeclaration.class);
-                    List<String> dependencies = new ArrayList<>(imports.stream()
-                                                                      .map(ImportDeclaration::getNameAsString)
-                                                                      .toList());
+                    var packageName = compilationUnit.getPackageDeclaration()
+                        .map(pkg -> pkg.getNameAsString())
+                        .orElse("");
 
-                    // Add dependencies from the same package (only the ones actually used in the class)
-                    String packageName = compilationUnit.getPackageDeclaration()
-                                                        .map(pkg -> pkg.getNameAsString())
-                                                        .orElse("");
-                    List<String> usedTypes = compilationUnit.findAll(com.github.javaparser.ast.type.ClassOrInterfaceType.class)
-                                                   .stream()
-                                                   .map(type -> type.getNameAsString())
-                                                   .toList();
-                    compilationUnit.findAll(com.github.javaparser.ast.body.ClassOrInterfaceDeclaration.class)
-                                   .stream()
-                                   .filter(cls -> usedTypes.contains(cls.getNameAsString()))
-                                   .forEach(cls -> dependencies.add(packageName + "." + cls.getNameAsString()));
+                    compilationUnit.findAll(com.github.javaparser.ast.type.ClassOrInterfaceType.class).forEach(type -> {
+                        var typeName = type.getNameAsString();
+                        if (dependencies.stream().noneMatch(dep -> dep.endsWith("." + typeName))) {
+                            var classFilePath = classPath + File.separator +  typeName + ".java";
+                            if (fs.existsBlocking(classFilePath)) {
+                                dependencies.add(packageName + "." + typeName);
+                            }
+                        }
+                    });
 
-                    classPromise.complete(new ClassDepsReport(dependencies));
                 } catch (Exception e) {
                     classPromise.fail(e);
                 }
+
+                classPromise.complete(new ClassDepsReport(dependencies));
+
             } else {
                 classPromise.fail(buffer.cause());
             }
+
         });
 
         return classPromise.future();
