@@ -10,7 +10,7 @@ public class App
 {
     public static void main( String[] args )
     {
-        new DependencyAnalyzer().getClassDependencies("src/main/java/pcd/ass02/library/DependencyAnalyzer.java")
+        new DependencyAnalyzer().getClassDependencies("src\\main\\java\\pcd\\ass02\\library\\DependencyAnalyzer.java")
             .onComplete(result -> {
                 if (result.succeeded()) {
                     System.out.println("Dependencies: " + System.lineSeparator());
