@@ -1,5 +1,7 @@
 package pcd.ass02;
 
+import java.nio.file.Paths;
+
 import pcd.ass02.library.DependencyAnalyzer;
 
 /**
@@ -10,7 +12,9 @@ public class App
 {
     public static void main( String[] args )
     {
-        new DependencyAnalyzer().getClassDependencies("src/main/java/pcd/ass02/library/DependencyAnalyzer.java")
+        DependencyAnalyzer analyzer = new DependencyAnalyzer();
+        /*
+        analyzer.getClassDependencies(Paths.get("src/main/java/pcd/ass02/library/DependencyAnalyzer.java").toString())
             .onComplete(result -> {
                 if (result.succeeded()) {
                     System.out.println("Dependencies: " + System.lineSeparator());
@@ -18,7 +22,18 @@ public class App
                 } else {
                     System.err.println("Failed to get dependencies: " + result.cause().getMessage());
                 }
-                System.exit(0);
             });
+        */
+
+        analyzer.getPackageDependencies(Paths.get("src/main/java/pcd/ass02").toString()).onComplete(result -> {
+            if (result.succeeded()) {
+                System.out.println("Package Dependencies: " + System.lineSeparator());
+                result.result().getDependencies().forEach(System.out::println);
+                System.exit(0);
+            } else {
+                System.err.println("Failed to get package dependencies: " + result.cause().getMessage());
+                System.exit(1);
+            }
+        });
     }
 }

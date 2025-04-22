@@ -19,7 +19,7 @@ public class AppTest {
         new DependencyAnalyzer().getClassDependencies(testFile.getAbsolutePath())
                 .onComplete(result -> {
                     if (result.succeeded()) {
-                        assertFalse(result.result().dependencies().isEmpty());
+                        assertFalse(result.result().getDependencies().isEmpty());
                     } else {
                         System.err.println("Failed to get dependencies: " + result.cause().getMessage());
                     }
