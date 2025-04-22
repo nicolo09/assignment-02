@@ -10,6 +10,7 @@ import com.github.javaparser.JavaParser;
 import com.github.javaparser.ParserConfiguration;
 import com.github.javaparser.ast.CompilationUnit;
 import com.github.javaparser.ast.ImportDeclaration;
+import com.github.javaparser.ast.body.ClassOrInterfaceDeclaration;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import io.vertx.core.Future;
@@ -24,13 +25,22 @@ import pcd.ass02.common.reports.ProjectDepsReport;
 
 public class DependencyAnalyzer {
 
-    private Vertx vertx = Vertx.vertx();
+    private Vertx vertx = Vertx.currentContext() == null ? Vertx.vertx() : Vertx.currentContext().owner(); // TODO
+                                                                                                           // Cambiare
+                                                                                                           // quando si
+                                                                                                           // fa il
+                                                                                                           // deploy del
+                                                                                                           // verticle
 
     public DependencyAnalyzer() {
         // Constructor
     }
 
     public Future<ClassDepsReport> getClassDependencies(final String classSrcFile) {
+        return getClassDependencies(classSrcFile, null);
+    }
+
+    private Future<ClassDepsReport> getClassDependencies(final String classSrcFile, final String excludedPackageSrc) {
 
         Promise<ClassDepsReport> classPromise = Promise.promise();
         FileSystem fs = vertx.fileSystem();
@@ -63,11 +73,27 @@ public class DependencyAnalyzer {
 
                         compilationUnit.findAll(ClassOrInterfaceType.class).forEach(type -> {
                             var typeName = type.getNameAsString();
+                            var fullyQualifiedName = packageName + "." + typeName;
+                            var classFilePath = classPath + File.separator + typeName + ".java";
                             if (dependencies.stream().noneMatch(dep -> dep.endsWith("." + typeName))) {
-                                var classFilePath = classPath + File.separator + typeName + ".java";
-                                if (fs.existsBlocking(classFilePath)) {
-                                    dependencies.add(packageName + "." + typeName);
+                                if (fs.existsBlocking(classFilePath)) { // TODO: Change to async
+                                    // Add the dependency to the list
+                                    dependencies.add(fullyQualifiedName);
                                 }
+                            }
+                        });
+
+                        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(classDec -> {
+                            // Filter out dependencies from the excluded package
+                            var classQualifiedName = classDec.getFullyQualifiedName().get();
+                            if (excludedPackageSrc != null) {
+                                String srcRoot = classSrcFile.replace(".java", ""); // Remove .java extension
+                                srcRoot = srcRoot.substring(0, srcRoot.length() - classQualifiedName.length()); // Remove
+                                                                                                                // class
+                                                                                                                // name
+                                var excludedPackage = excludedPackageSrc.replace(srcRoot, "")
+                                        .replace(File.separatorChar, '.'); // Remove .java extension
+                                dependencies.removeIf(dep -> dep.startsWith(excludedPackage));
                             }
                         });
                     } catch (Exception e) {
@@ -86,6 +112,11 @@ public class DependencyAnalyzer {
     }
 
     public Future<PackageDepsReport> getPackageDependencies(final String packageSrcFolder) {
+        return getPackageDependencies(packageSrcFolder, null);
+    }
+
+    private Future<PackageDepsReport> getPackageDependencies(final String packageSrcFolder,
+            final String excludedPackageSrc) {
         Promise<PackageDepsReport> packagePromise = Promise.promise();
         FileSystem fileSystem = vertx.fileSystem();
 
@@ -105,11 +136,14 @@ public class DependencyAnalyzer {
                                 .compose(props -> {
                                     Future<? extends AbstractReport> future;
                                     if (props.isDirectory()) {
-                                        future = getPackageDependencies(fileOrDir).onSuccess(report -> {
-                                            dependencies.addAll(report.getDependencies());
-                                        });
+                                        future = getPackageDependencies(fileOrDir, packageSrcFolder)
+                                                .onSuccess(report -> {
+                                                    dependencies.addAll(report.getDependencies());
+                                                });
                                     } else if (fileOrDir.endsWith(".java")) {
-                                        future = getClassDependencies(fileOrDir).onSuccess(report -> {
+                                        var excludedPackage = excludedPackageSrc != null ? excludedPackageSrc
+                                                : packageSrcFolder;
+                                        future = getClassDependencies(fileOrDir, excludedPackage).onSuccess(report -> {
                                             dependencies.addAll(report.getDependencies());
                                         });
                                     } else {
@@ -120,6 +154,7 @@ public class DependencyAnalyzer {
                     }
                     Future.all(futureList).onComplete(ar -> {
                         if (ar.succeeded()) {
+                            // Filter out dependencies from the same package
                             packagePromise.complete(new PackageDepsReport(new ArrayList<>(dependencies)));
                         } else {
                             packagePromise.fail(ar.cause());
