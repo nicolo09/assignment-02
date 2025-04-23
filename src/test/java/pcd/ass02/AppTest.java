@@ -27,7 +27,7 @@ public class AppTest {
     public void cubeDependenciesTest() {
         Path testFile = Paths.get("src/test/java/mock/model/Cube.java");
         VertxTestContext testContext = new VertxTestContext();
-        new DependencyAnalyzer().getClassDependencies(testFile.toAbsolutePath().toString())
+        analyzer.getClassDependencies(testFile.toAbsolutePath().toString())
                 .onComplete(result -> {
                     if (result.succeeded()) {
                         if (Set.copyOf(result.result().getDependencies()).equals(Set.of("mock.model.Point3D"))) {
@@ -53,7 +53,7 @@ public class AppTest {
     public void packageDependenciesTest() {
         Path testPackage = Paths.get("src/test/java/mock/view");
         VertxTestContext testContext = new VertxTestContext();
-        new DependencyAnalyzer().getPackageDependencies(testPackage.toAbsolutePath().toString())
+        analyzer.getPackageDependencies(testPackage.toAbsolutePath().toString())
                 .onComplete(result -> {
                     if (result.succeeded()) {
                         if (Set.copyOf(result.result().getDependencies()).equals(Set.of("mock.model.Cube"))) {

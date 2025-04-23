@@ -47,13 +47,14 @@ public class DependencyAnalyzer {
         var classPath = classSrcFile.substring(0, classSrcFile.lastIndexOf(File.separator));
         fs.exists(classSrcFile)
                 .compose((Boolean result) -> {
-                    // TODO: Check if the file exists, this code is maybe correct right now
+                    // Check if the class source file exists
                     return result ? fs.readFile(classSrcFile) : Future.failedFuture("File not found: " + classSrcFile);
                 })
                 .onSuccess((Buffer buffer) -> {
                     // Process the file content and generate the ClassDepsReport
                     List<String> dependencies = new ArrayList<>();
                     try {
+                        // Create a JavaParser instance with the desired configuration
                         JavaParser parser = new JavaParser(new ParserConfiguration()
                                 .setLanguageLevel(ParserConfiguration.LanguageLevel.JAVA_21));
 
@@ -66,10 +67,10 @@ public class DependencyAnalyzer {
                             dependencies.add(importDecl.getNameAsString());
                         }
 
+                        // Collect classes dependencies in the same package
                         var packageName = compilationUnit.getPackageDeclaration()
                                 .map(pkg -> pkg.getNameAsString())
                                 .orElse("");
-
                         compilationUnit.findAll(ClassOrInterfaceType.class).forEach(type -> {
                             var typeName = type.getNameAsString();
                             var fullyQualifiedName = packageName + "." + typeName;
@@ -82,20 +83,21 @@ public class DependencyAnalyzer {
                             }
                         });
 
+                        // Filter out dependencies from the excluded package
                         compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(classDec -> {
-                            // Filter out dependencies from the excluded package
                             var classQualifiedName = classDec.getFullyQualifiedName().get();
                             if (excludedPackageSrc != null) {
                                 String srcRoot = classSrcFile.replace(".java", ""); // Remove .java extension
-                                srcRoot = srcRoot.substring(0, srcRoot.length() - classQualifiedName.length()); // Remove
-                                                                                                                // class
-                                                                                                                // name
-                                var excludedPackage = excludedPackageSrc.replace(srcRoot, "")
-                                        .replace(File.separatorChar, '.'); // Remove .java extension
+                                // Remove the class name from the path
+                                srcRoot = srcRoot.substring(0, srcRoot.length() - classQualifiedName.length()); 
+                                String excludedPackage = excludedPackageSrc.replace(srcRoot, "")
+                                        .replace(File.separatorChar, '.');
+                                // Remove all dependencies that start with the excluded package name
                                 dependencies.removeIf(dep -> dep.startsWith(excludedPackage));
                             }
                         });
                     } catch (Exception e) {
+                        // Error while parsing the class file
                         classPromise.fail(e);
                         System.err.println("Error parsing class file: " + e.getMessage());
                         return;
@@ -121,6 +123,7 @@ public class DependencyAnalyzer {
 
         fileSystem.exists(packageSrcFolder)
                 .compose((Boolean result) -> {
+                    // Check if the package folder exists
                     if (result) {
                         return fileSystem.readDir(packageSrcFolder);
                     } else {
@@ -128,29 +131,40 @@ public class DependencyAnalyzer {
                     }
                 })
                 .onSuccess(pkgContent -> {
-                    Set<String> dependencies = new HashSet<>();
+                    Set<String> dependencies = new HashSet<>(); // Use a Set to avoid duplicates
                     List<Future<? extends AbstractReport>> futureList = new ArrayList<>();
                     for (String fileOrDir : pkgContent) {
-                        futureList.add(fileSystem.props(fileOrDir)
-                                .compose(props -> {
-                                    Future<? extends AbstractReport> future;
-                                    if (props.isDirectory()) {
-                                        future = getPackageDependencies(fileOrDir, packageSrcFolder)
-                                                .onSuccess(report -> {
-                                                    dependencies.addAll(report.getDependencies());
-                                                });
-                                    } else if (fileOrDir.endsWith(".java")) {
-                                        var excludedPackage = excludedPackageSrc != null ? excludedPackageSrc
-                                                : packageSrcFolder;
-                                        future = getClassDependencies(fileOrDir, excludedPackage).onSuccess(report -> {
-                                            dependencies.addAll(report.getDependencies());
-                                        });
-                                    } else {
-                                        future = Future.failedFuture("Unsupported file type: " + fileOrDir);
-                                    }
-                                    return future;
-                                }));
+                        // For each file or directory in the package retrieve its dependencies
+                        futureList.add(
+                                fileSystem
+                                        .props(fileOrDir)
+                                        .compose(props -> {
+                                            Future<? extends AbstractReport> future;
+                                            // Check if the file is a directory or a Java file
+                                            if (props.isDirectory()) {
+                                                // Recursively get dependencies from the subdirectory
+                                                future = getPackageDependencies(fileOrDir, packageSrcFolder)
+                                                        .onSuccess(report -> {
+                                                            dependencies.addAll(report.getDependencies());
+                                                        });
+                                            } else if (fileOrDir.endsWith(".java")) {
+                                                // Get dependencies from the Java file, excluding dependencies between
+                                                // packages based on the higher level package
+                                                String excludedPackage = excludedPackageSrc != null ? excludedPackageSrc
+                                                        : packageSrcFolder;
+                                                future = getClassDependencies(fileOrDir, excludedPackage)
+                                                        .onSuccess(report -> {
+                                                            dependencies.addAll(report.getDependencies());
+                                                        });
+                                            } else {
+                                                // Unsupported file type, handle as needed
+                                                // We can just ignore it
+                                                future = Future.succeededFuture();
+                                            }
+                                            return future;
+                                        }));
                     }
+                    // Wait for all futures to complete
                     Future.all(futureList).onComplete(ar -> {
                         if (ar.succeeded()) {
                             // Filter out dependencies from the same package
@@ -159,6 +173,10 @@ public class DependencyAnalyzer {
                             packagePromise.fail(ar.cause());
                         }
                     });
+                })
+                .onFailure(throwable -> {
+                    // Package folder not found or error reading it
+                    packagePromise.fail(throwable);
                 });
         return packagePromise.future();
     }
