@@ -26,9 +26,22 @@ public class App
             });
         */
 
+        /*
         analyzer.getPackageDependencies(Paths.get("src/main/java/pcd/ass02/library").toAbsolutePath().toString()).onComplete(result -> {
             if (result.succeeded()) {
                 System.out.println("Package Dependencies: " + System.lineSeparator());
+                result.result().getDependencies().stream().sorted().forEachOrdered(System.out::println);
+                System.exit(0);
+            } else {
+                System.err.println("Failed to get package dependencies: " + result.cause().getMessage());
+                System.exit(1);
+            }
+        });
+        */
+
+        analyzer.getProjectDependencies(Paths.get("src/main/java").toAbsolutePath().toString()).onComplete(result -> {
+            if (result.succeeded()) {
+                System.out.println("Project Dependencies: " + System.lineSeparator());
                 result.result().getDependencies().stream().sorted().forEachOrdered(System.out::println);
                 System.exit(0);
             } else {

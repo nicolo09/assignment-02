@@ -17,12 +17,18 @@ import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.file.FileProps;
 import io.vertx.core.file.FileSystem;
 import pcd.ass02.common.reports.AbstractReport;
 import pcd.ass02.common.reports.ClassDepsReport;
 import pcd.ass02.common.reports.PackageDepsReport;
 import pcd.ass02.common.reports.ProjectDepsReport;
 
+/**
+ * DependencyAnalyzer is a class that analyzes the dependencies of Java classes,
+ * packages, and projects. It uses the Vert.x library for asynchronous file
+ * operations and the JavaParser library for parsing Java source files.
+ */
 public class DependencyAnalyzer {
 
     private final Vertx vertx; // TODO: Valutare quando si deploya il verticle
@@ -35,10 +41,33 @@ public class DependencyAnalyzer {
         this.vertx = vertx;
     }
 
+    /**
+     * Get the dependencies of a class. The class is a Java file. The
+     * dependencies are retrieved by searching the class for import statements and
+     * then adding used types from the same package.
+     * 
+     * @param classSrcFile The path to the class source file.
+     * @return A future that will be completed with the class dependencies or failed
+     *         with an error if the class source file does not exist or is not a
+     *         Java file.
+     */
     public Future<ClassDepsReport> getClassDependencies(final String classSrcFile) {
         return getClassDependencies(classSrcFile, null);
     }
 
+    /**
+     * Get the dependencies of a class. The class is a Java file. The
+     * dependencies are retrieved by searching the class for import statements and
+     * then adding used types from the same package.
+     * 
+     * @param classSrcFile       The path to the class source file.
+     * @param excludedPackageSrc The path to the excluded package folder. This is
+     *                           used to exclude dependencies that are internal to
+     *                           the package.
+     * @return A future that will be completed with the class dependencies or failed
+     *         with an error if the class source file does not exist or is not a
+     *         Java file.
+     */
     private Future<ClassDepsReport> getClassDependencies(final String classSrcFile, final String excludedPackageSrc) {
 
         Promise<ClassDepsReport> classPromise = Promise.promise();
@@ -89,7 +118,7 @@ public class DependencyAnalyzer {
                             if (excludedPackageSrc != null) {
                                 String srcRoot = classSrcFile.replace(".java", ""); // Remove .java extension
                                 // Remove the class name from the path
-                                srcRoot = srcRoot.substring(0, srcRoot.length() - classQualifiedName.length()); 
+                                srcRoot = srcRoot.substring(0, srcRoot.length() - classQualifiedName.length());
                                 String excludedPackage = excludedPackageSrc.replace(srcRoot, "")
                                         .replace(File.separatorChar, '.');
                                 // Remove all dependencies that start with the excluded package name
@@ -112,10 +141,35 @@ public class DependencyAnalyzer {
         return classPromise.future();
     }
 
+    /**
+     * Get the dependencies of a package. The package is a folder that contains Java
+     * files and directories. The dependencies are the Java files that are not in
+     * the same package. The dependencies are retrieved by searching each package
+     * recursively and retrieving the dependency for each Java file
+     * 
+     * @param packageSrcFolder The path to the package folder.
+     * @return A future that will be completed with the package dependencies or
+     *         failed with an error if the package folder does not exist or is not a
+     *         directory.
+     */
     public Future<PackageDepsReport> getPackageDependencies(final String packageSrcFolder) {
         return getPackageDependencies(packageSrcFolder, null);
     }
 
+    /**
+     * Get the dependencies of a package. The package is a folder that contains Java
+     * files and directories. The dependencies are the Java files that are not in
+     * the same package. The dependencies are retrieved by searching each package
+     * recursively and retrieving the dependency for each Java file
+     * 
+     * @param packageSrcFolder   The path to the package folder.
+     * @param excludedPackageSrc The path to the excluded package folder. This is
+     *                           used to exclude dependencies that are internal to
+     *                           the package.
+     * @return A future that will be completed with the package dependencies or
+     *         failed with an error if the package folder does not exist or is not a
+     *         directory.
+     */
     private Future<PackageDepsReport> getPackageDependencies(final String packageSrcFolder,
             final String excludedPackageSrc) {
         Promise<PackageDepsReport> packagePromise = Promise.promise();
@@ -181,8 +235,75 @@ public class DependencyAnalyzer {
         return packagePromise.future();
     }
 
+    /**
+     * Get the dependencies of a project. The project is a folder that contains
+     * Java files and directories. The dependencies are the Java files that are not
+     * in
+     * the same package as the project. The dependencies are retrieved by
+     * treating the project as a package and then removing the dependencies that
+     * are internal to the project.
+     * 
+     * @param projectSrcFolder The path to the project folder.
+     * @return A future that will be completed with the project dependencies or
+     *         failed with an error if the project folder does not exist or is not a
+     *         directory.
+     */
     public Future<ProjectDepsReport> getProjectDependencies(final String projectSrcFolder) {
-        throw new UnsupportedOperationException("Not implemented yet!");
+        Promise<ProjectDepsReport> projectPromise = Promise.promise();
+        FileSystem fileSystem = vertx.fileSystem();
+        Set<String> dependencies = new HashSet<>(); // Use a Set to avoid duplicates
+
+        fileSystem.exists(projectSrcFolder)
+                .compose((Boolean result) -> {
+                    // Check if the project folder exists
+                    if (result) {
+                        return fileSystem.props(projectSrcFolder);
+                    } else {
+                        return Future.failedFuture("Project folder not found: " + projectSrcFolder);
+                    }
+                })
+                .compose((FileProps props) -> {
+                    // Check if the project folder is a directory
+                    if (props.isDirectory()) {
+                        return fileSystem.readDir(projectSrcFolder);
+                    } else {
+                        return Future.failedFuture("Project folder is not a directory: " + projectSrcFolder);
+                    }
+                })
+                .compose((List<String> projectContent) -> {
+
+                    return getPackageDependencies(projectSrcFolder)
+                            .compose(dependenciesReport -> {
+                                // Add the dependencies from the package report to the project dependencies
+                                dependencies.addAll(dependenciesReport.getDependencies());
+                                List<Future<?>> futureList = new ArrayList<>();
+                                // For each file or directory in the project, check if it is a directory and
+                                // remove dependencies that start with the directory name (to remove internal
+                                // packages)
+                                for (String fileOrDir : projectContent) {
+                                    futureList.add(
+                                            fileSystem.props(fileOrDir)
+                                                    .onSuccess(props -> {
+                                                        if (props.isDirectory()) {
+                                                            dependencies.removeIf(dep -> dep.startsWith(fileOrDir
+                                                                    .substring(fileOrDir.lastIndexOf(File.separator)
+                                                                            + 1)));
+                                                        }
+                                                    }));
+                                }
+                                return Future.all(futureList);
+                            });
+                })
+                .onComplete(ar -> {
+                    // Wait for all futures to complete and resolve the project promise
+                    if (ar.succeeded()) {
+                        projectPromise.complete(new ProjectDepsReport(new ArrayList<>(dependencies)));
+                    } else {
+                        projectPromise.fail(ar.cause());
+                    }
+                });
+        ;
+        return projectPromise.future();
     }
 
 }
