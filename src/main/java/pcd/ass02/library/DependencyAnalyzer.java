@@ -25,15 +25,14 @@ import pcd.ass02.common.reports.ProjectDepsReport;
 
 public class DependencyAnalyzer {
 
-    private Vertx vertx = Vertx.currentContext() == null ? Vertx.vertx() : Vertx.currentContext().owner(); // TODO
-                                                                                                           // Cambiare
-                                                                                                           // quando si
-                                                                                                           // fa il
-                                                                                                           // deploy del
-                                                                                                           // verticle
+    private final Vertx vertx; // TODO: Valutare quando si deploya il verticle
 
     public DependencyAnalyzer() {
-        // Constructor
+        this.vertx = Vertx.vertx();
+    }
+
+    public DependencyAnalyzer(Vertx vertx) {
+        this.vertx = vertx;
     }
 
     public Future<ClassDepsReport> getClassDependencies(final String classSrcFile) {
