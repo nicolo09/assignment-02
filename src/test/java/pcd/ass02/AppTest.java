@@ -77,7 +77,27 @@ public class AppTest {
 
     @Test
     public void projectDependenciesTest() {
-        assertThrows(UnsupportedOperationException.class,
-                () -> new DependencyAnalyzer().getProjectDependencies("src/main/java/pcd/ass02/library"));
+        Path testProject = Paths.get("src/test/java/mock");
+        VertxTestContext testContext = new VertxTestContext();
+        analyzer.getProjectDependencies(testProject.toAbsolutePath().toString())
+                .onComplete(result -> {
+                    if (result.succeeded()) {
+                        if (Set.copyOf(result.result().getDependencies()).equals(Set.of("java.util.List", "java.util.ArrayList"))) {
+                            testContext.completeNow();
+                        } else {
+                            testContext.failNow(new Throwable("Dependencies do not match"));
+                        }
+                    } else {
+                        testContext.failNow(result.cause());
+                    }
+                });
+        try {
+            assertTrue(testContext.awaitCompletion(AWAIT_TIME, TimeUnit.SECONDS));
+        } catch (Exception e) {
+            fail(e);
+        }
+        if (testContext.failed()) {
+            fail(testContext.causeOfFailure());
+        }
     }
 }
