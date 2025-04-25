@@ -1,14 +1,14 @@
 package pcd.ass02;
 
-import java.nio.file.Paths;
-
+import javafx.application.Application;
 import pcd.ass02.library.DependencyAnalyzer;
+import pcd.ass02.view.DependencyView;
 
 /**
  * Hello world!
  *
  */
-public class App 
+public class App
 {
     public static void main( String[] args )
     {
@@ -39,6 +39,7 @@ public class App
         });
         */
 
+        /*
         analyzer.getProjectDependencies(Paths.get("src/main/java").toAbsolutePath().toString()).onComplete(result -> {
             if (result.succeeded()) {
                 System.out.println("Project Dependencies: " + System.lineSeparator());
@@ -49,5 +50,9 @@ public class App
                 System.exit(1);
             }
         });
+        */
+
+        // Start the JavaFX application
+        Application.launch(DependencyView.class, args);
     }
 }

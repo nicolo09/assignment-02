@@ -34,7 +34,7 @@ public class DependencyAnalyzer {
     private final Vertx vertx; // TODO: Valutare quando si deploya il verticle
 
     public DependencyAnalyzer() {
-        this.vertx = Vertx.vertx();
+        this.vertx = Vertx.currentContext() == null ? Vertx.vertx() : Vertx.currentContext().owner();
     }
 
     public DependencyAnalyzer(Vertx vertx) {
@@ -271,7 +271,6 @@ public class DependencyAnalyzer {
                     }
                 })
                 .compose((List<String> projectContent) -> {
-
                     return getPackageDependencies(projectSrcFolder)
                             .compose(dependenciesReport -> {
                                 // Add the dependencies from the package report to the project dependencies
