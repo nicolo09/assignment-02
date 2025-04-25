@@ -4,7 +4,7 @@ import org.junit.jupiter.api.Test;
 
 import io.vertx.core.Vertx;
 import io.vertx.junit5.VertxTestContext;
-import pcd.ass02.library.DependencyAnalyzer;
+import pcd.ass02.async.library.DependencyAnalyzer;
 
 import static org.junit.jupiter.api.Assertions.*;
 

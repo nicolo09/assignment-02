@@ -1,16 +1,16 @@
-package pcd.ass02.common.reports;
+package pcd.ass02.async.common.reports;
 
 import java.util.List;
 
-public class ProjectDepsReport extends AbstractReport {
+public class PackageDepsReport extends AbstractReport {
 
-    public ProjectDepsReport(List<String> dependencies) {
+    public PackageDepsReport(List<String> dependencies) {
         super(dependencies);
     }
 
     @Override
     public String toString() {
-        return "ProjectDepsReport{" +
+        return "PackageDepsReport{" +
                 "dependencies=" + this.getDependencies() +
                 '}';
     }

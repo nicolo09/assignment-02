@@ -1,4 +1,4 @@
-package pcd.ass02.common.reports;
+package pcd.ass02.async.common.reports;
 
 import java.util.List;
 

@@ -1,4 +1,4 @@
-package pcd.ass02.library;
+package pcd.ass02.async.library;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -19,10 +19,10 @@ import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.file.FileProps;
 import io.vertx.core.file.FileSystem;
-import pcd.ass02.common.reports.AbstractReport;
-import pcd.ass02.common.reports.ClassDepsReport;
-import pcd.ass02.common.reports.PackageDepsReport;
-import pcd.ass02.common.reports.ProjectDepsReport;
+import pcd.ass02.async.common.reports.AbstractReport;
+import pcd.ass02.async.common.reports.ClassDepsReport;
+import pcd.ass02.async.common.reports.PackageDepsReport;
+import pcd.ass02.async.common.reports.ProjectDepsReport;
 
 /**
  * DependencyAnalyzer is a class that analyzes the dependencies of Java classes,

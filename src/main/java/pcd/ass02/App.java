@@ -1,8 +1,8 @@
 package pcd.ass02;
 
 import javafx.application.Application;
-import pcd.ass02.library.DependencyAnalyzer;
-import pcd.ass02.view.DependencyView;
+import pcd.ass02.async.library.DependencyAnalyzer;
+import pcd.ass02.reactive.view.JFXApplication;
 
 /**
  * Hello world!
@@ -53,6 +53,6 @@ public class App
         */
 
         // Start the JavaFX application
-        Application.launch(DependencyView.class, args);
+        Application.launch(JFXApplication.class, args);
     }
 }
