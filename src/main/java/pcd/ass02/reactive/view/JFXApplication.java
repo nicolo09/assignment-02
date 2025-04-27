@@ -13,6 +13,7 @@ public class JFXApplication extends Application {
         var controller = new DependencyController(depsFinder);
         DependencyView view = new DependencyViewImpl(primaryStage);
         view.setController(controller);
+        view.start();
     }
 
     
