@@ -1,19 +1,10 @@
 package pcd.ass02.reactive.controller;
 
-import java.nio.file.FileSystem;
-import java.nio.file.FileSystems;
 import java.nio.file.Path;
-import java.nio.file.WatchEvent;
-import java.nio.file.WatchKey;
-import java.nio.file.WatchService;
 
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
-import static java.nio.file.StandardWatchEventKinds.*;
-import static com.sun.nio.file.ExtendedWatchEventModifier.FILE_TREE;
-
-import io.reactivex.rxjava3.core.Observable;
 import pcd.ass02.reactive.model.ReactiveDependencyFinder;
 import pcd.ass02.reactive.view.DependencyView;
 
@@ -65,7 +56,7 @@ public class DependencyController {
                 LOGGER.info("File changed: " + path);
             });
             */
-            depsFinder.findAllClassDependencies(projectDirectory).subscribe(dependency -> {
+            depsFinder.findAllClassesDependencies(projectDirectory).subscribe(dependency -> {
                 // Update the view with the found dependency
                 LOGGER.info(dependency.getClassName() + " depends on: " + dependency.getDependencies());
             }, error -> {

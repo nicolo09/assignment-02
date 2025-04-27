@@ -23,26 +23,31 @@ public class ReactiveDependencyFinder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReactiveDependencyFinder.class);
 
-    public Observable<Dependency> findAllClassDependencies(final Path projectDirectory) {
+    public Observable<Dependency> findAllClassesDependencies(final Path projectDirectory) {
         // Create an observable that emits dependencies found in the project directory
         return Observable.create(emitter -> {
-            try (Stream<Path> filesStream = Files.walk(projectDirectory)) {
-                filesStream.filter(Files::isRegularFile)
-                        .filter(path -> path.toString().endsWith(".java"))
-                        .forEach(classFile -> {
-                            try {
-                                Dependency dependency = getClassDependencies(classFile);
-                                LOGGER.info("Found dependencies of: " + dependency.getClassName());
-                                emitter.onNext(dependency);
-                            } catch (Exception e) {
-                                LOGGER.error("Error processing file: " + classFile, e);
-                                emitter.onError(e);
-                            }
-                        });
-            } catch (Exception e) {
-                LOGGER.error("Error finding dependencies: ", e);
-                emitter.onError(e);
-            }
+            // TODO: Passare un qualche observable qui che riceva il comando di chiusura dell'emitter su cui chiamiamo l'onComplete() e l'interrupt del thread, le risorse in teoria sono chiuse in automatico dai try-with-resources
+            new Thread(() -> {
+                try (Stream<Path> filesStream = Files.walk(projectDirectory)) {
+                    filesStream.filter(Files::isRegularFile)
+                            .filter(path -> path.toString().endsWith(".java"))
+                            .forEach(classFile -> {
+                                try {
+                                    Dependency dependency = getClassDependencies(classFile);
+                                    LOGGER.info("Found dependencies of: " + dependency.getClassName());
+                                    emitter.onNext(dependency);
+                                } catch (Exception e) {
+                                    LOGGER.error("Error processing file: " + classFile, e);
+                                    emitter.onError(e);
+                                }
+                            });
+                } catch (Exception e) {
+                    LOGGER.error("Error finding dependencies: ", e);
+                    emitter.onError(e);
+                }
+                //TODO: Register for file changes in the project directory
+                //TODO: Something to stop the thread
+            }).start();
         });
     }
 
