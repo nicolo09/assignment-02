@@ -85,6 +85,7 @@ public class DependencyViewImpl implements DependencyView {
         Graph<String, String> g = new DependenciesDigraphWrapper(dependenciesGraph);
         SmartPlacementStrategy initialPlacement = new SmartCircularSortedPlacementStrategy();
         this.graphView = new SmartGraphPanel<>(g, initialPlacement);
+        this.graphView.setAutomaticLayout(true);
         
         // Main border pane
         rootBorderPane = new BorderPane();
