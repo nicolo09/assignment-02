@@ -1,6 +1,7 @@
 package pcd.ass02.reactive.view;
 
 import pcd.ass02.reactive.controller.DependencyController;
+import pcd.ass02.reactive.model.DependenciesGraph;
 
 public interface DependencyView {
 
@@ -9,5 +10,7 @@ public interface DependencyView {
     void start();
 
     void showError(String message);
+
+    void updateDependencyGraph();
 
 }

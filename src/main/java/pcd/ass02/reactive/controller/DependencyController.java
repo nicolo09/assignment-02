@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import org.slf4j.LoggerFactory;
 import org.slf4j.Logger;
 
+import pcd.ass02.reactive.model.DependenciesGraph;
 import pcd.ass02.reactive.model.ReactiveDependencyFinder;
 import pcd.ass02.reactive.view.DependencyView;
 
@@ -15,9 +16,11 @@ public class DependencyController {
     private DependencyView view;
     private Path projectDirectory;
     private final ReactiveDependencyFinder depsFinder;
+    private final DependenciesGraph dependenciesGraph;
 
-    public DependencyController(final ReactiveDependencyFinder depsFinder) {
+    public DependencyController(final ReactiveDependencyFinder depsFinder, final DependenciesGraph dependenciesGraph) {
         this.depsFinder = depsFinder;
+        this.dependenciesGraph = dependenciesGraph;
     }
 
     public void setProjectDirectory(final Path projectDirectory) {
@@ -26,10 +29,16 @@ public class DependencyController {
         LOGGER.info("Project directory set to: " + projectDirectory);
     }
 
+    public void setView(final DependencyView view) {
+        // Set the view for the controller
+        this.view = view;
+    }
+
     public void startAnalysis() {
         // Start the analysis process
         LOGGER.info("Starting analysis for project directory: " + projectDirectory);
         if (projectDirectory != null) {
+            //TODO: Remove this
             /*
             Observable<String> observable = Observable.create(emitter -> {
                 new Thread(() -> {
@@ -56,9 +65,13 @@ public class DependencyController {
                 LOGGER.info("File changed: " + path);
             });
             */
+            // Set the dependencies graph in the view
             depsFinder.findAllClassesDependencies(projectDirectory).subscribe(dependency -> {
+                // For each dependency found, add it to the dependencies graph
+                dependenciesGraph.addAllDependency(dependency.getKey(), dependency.getValue());
                 // Update the view with the found dependency
-                LOGGER.info(dependency.getClassName() + " depends on: " + dependency.getDependencies());
+                LOGGER.info(dependency.getKey() + " depends on: " + dependency.getValue());
+                view.updateDependencyGraph();
             }, error -> {
                 // Handle any errors that occur during the analysis
                 LOGGER.error("Error during analysis: ", error);

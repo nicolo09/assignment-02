@@ -1,15 +1,24 @@
 package pcd.ass02.reactive.view;
 
+import com.brunomnsilva.smartgraph.graph.Graph;
+import com.brunomnsilva.smartgraph.graph.GraphEdgeList;
+import com.brunomnsilva.smartgraph.graphview.SmartCircularSortedPlacementStrategy;
+import com.brunomnsilva.smartgraph.graphview.SmartGraphPanel;
+import com.brunomnsilva.smartgraph.graphview.SmartPlacementStrategy;
+
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Pane;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import pcd.ass02.reactive.controller.DependencyController;
+import pcd.ass02.reactive.model.DependenciesGraph;
 
 public class DependencyViewImpl implements DependencyView {
 
@@ -19,11 +28,15 @@ public class DependencyViewImpl implements DependencyView {
     private static final int TOP_HEIGHT_FRAC = 10;
     private static final boolean RESIZABLE = true;
     private final Stage primaryStage;
+    private BorderPane rootBorderPane;
+    private SmartGraphPanel<String, String> graphView;
+    private final DependenciesGraph dependenciesGraph;
 
     private DependencyController controller;
 
-    public DependencyViewImpl(final Stage primaryStage) {
+    public DependencyViewImpl(final Stage primaryStage, final DependenciesGraph dependenciesGraph) {
         this.primaryStage = primaryStage;
+        this.dependenciesGraph = dependenciesGraph;
     }
 
     public void setController(final DependencyController controller) {
@@ -37,6 +50,7 @@ public class DependencyViewImpl implements DependencyView {
         this.primaryStage.setResizable(RESIZABLE);
         this.primaryStage.setScene(this.getMainScene());
         this.primaryStage.show();
+        this.graphView.init();
     }
 
     private Scene getMainScene() {
@@ -68,22 +82,36 @@ public class DependencyViewImpl implements DependencyView {
         top.setAlignment(javafx.geometry.Pos.CENTER);
         top.setPrefSize(WIDTH, HEIGHT / TOP_HEIGHT_FRAC);
 
-        // Main panel
-        BorderPane root = new BorderPane();
-        root.setTop(top);
-        root.setCenter(new Pane()); // TODO: Placeholder for the main content
-        root.setPrefSize(WIDTH, HEIGHT);
+        Graph<String, String> g = new DependenciesDigraphWrapper(dependenciesGraph);
+        SmartPlacementStrategy initialPlacement = new SmartCircularSortedPlacementStrategy();
+        this.graphView = new SmartGraphPanel<>(g, initialPlacement);
+        
+        // Main border pane
+        rootBorderPane = new BorderPane();
+        rootBorderPane.setPadding(new Insets(10, 10, 10, 10));
+        rootBorderPane.setPrefSize(WIDTH, HEIGHT);
+        rootBorderPane.setTop(top);
+        rootBorderPane.setCenter(graphView);
 
         // Create the root node
-        Scene scene = new Scene(root);
+        Scene scene = new Scene(rootBorderPane);
 
         return scene;
     }
 
     @Override
     public void showError(String message) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'showError'");
+        Platform.runLater(() -> {
+            Alert errorAlert = new Alert(AlertType.ERROR);
+            errorAlert.setHeaderText("Error");
+            errorAlert.setContentText(message);
+            errorAlert.showAndWait();
+        });
+    }
+
+    @Override
+    public void updateDependencyGraph() {
+        graphView.update();
     }
 
 }

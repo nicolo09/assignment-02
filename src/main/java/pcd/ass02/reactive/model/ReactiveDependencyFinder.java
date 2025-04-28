@@ -4,8 +4,10 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.AbstractMap;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.Map.Entry;
 import java.util.stream.Stream;
 
 import org.slf4j.Logger;
@@ -23,18 +25,20 @@ public class ReactiveDependencyFinder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReactiveDependencyFinder.class);
 
-    public Observable<Dependency> findAllClassesDependencies(final Path projectDirectory) {
+    public Observable<Entry<String, Set<String>>> findAllClassesDependencies(final Path projectDirectory) {
         // Create an observable that emits dependencies found in the project directory
         return Observable.create(emitter -> {
-            // TODO: Passare un qualche observable qui che riceva il comando di chiusura dell'emitter su cui chiamiamo l'onComplete() e l'interrupt del thread, le risorse in teoria sono chiuse in automatico dai try-with-resources
+            // TODO: Passare un qualche observable qui che riceva il comando di chiusura
+            // dell'emitter su cui chiamiamo l'onComplete() e l'interrupt del thread, le
+            // risorse in teoria sono chiuse in automatico dai try-with-resources
             new Thread(() -> {
                 try (Stream<Path> filesStream = Files.walk(projectDirectory)) {
                     filesStream.filter(Files::isRegularFile)
                             .filter(path -> path.toString().endsWith(".java"))
                             .forEach(classFile -> {
                                 try {
-                                    Dependency dependency = getClassDependencies(classFile);
-                                    LOGGER.info("Found dependencies of: " + dependency.getClassName());
+                                    Entry<String, Set<String>> dependency = getClassDependencies(classFile);
+                                    LOGGER.info("Found dependencies of: " + dependency.getKey());
                                     emitter.onNext(dependency);
                                 } catch (Exception e) {
                                     LOGGER.error("Error processing file: " + classFile, e);
@@ -45,13 +49,13 @@ public class ReactiveDependencyFinder {
                     LOGGER.error("Error finding dependencies: ", e);
                     emitter.onError(e);
                 }
-                //TODO: Register for file changes in the project directory
-                //TODO: Something to stop the thread
+                // TODO: Register for file changes in the project directory
+                // TODO: Something to stop the thread
             }).start();
         });
     }
 
-    private Dependency getClassDependencies(final Path classFile) {
+    private Entry<String, Set<String>> getClassDependencies(final Path classFile) {
         // Process the file content and generate the deps set
         Set<String> dependencies = new HashSet<>();
         var classPath = classFile.getParent();
@@ -87,11 +91,10 @@ public class ReactiveDependencyFinder {
 
             var className = classFile.getFileName().toString().replace(".java", "");
 
-            return new Dependency(className, dependencies);
+            return new AbstractMap.SimpleImmutableEntry<String, Set<String>>(className, dependencies);
         } catch (Exception e) {
             LOGGER.error("Error processing class file: " + classFile, e);
             throw new RuntimeException("Error processing class file: " + classFile, e);
         }
     }
-
 }
