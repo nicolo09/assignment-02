@@ -11,10 +11,14 @@ public class DependencyEdge implements Edge<String, String> {
     private final String dependencyName;
     private final String label;
 
-    public DependencyEdge(String className, String dependencyName, String label) {
+    public DependencyEdge(final String className, final String dependencyName, final String label) {
         this.className = className;
         this.dependencyName = dependencyName;
         this.label = label;
+    }
+
+    public DependencyEdge(final String className, final String dependencyName) {
+        this(className, dependencyName, "");
     }
 
     public String getClassName() {

@@ -56,7 +56,7 @@ public class DependenciesDigraphWrapper implements Digraph<String, String> {
         return dependenciesGraph.getAllDependencies().entrySet().stream()
                 .flatMap(d -> d.getValue().stream()
                         // TODO: Add a label to the edge
-                        .map(dependencyName -> new DependencyEdge(d.getKey(), dependencyName, "")))
+                        .map(dependencyName -> new DependencyEdge(d.getKey(), dependencyName)))
                 .collect(Collectors.toSet());
     }
 
@@ -109,14 +109,14 @@ public class DependenciesDigraphWrapper implements Digraph<String, String> {
     public Collection<Edge<String, String>> incidentEdges(Vertex<String> inbound) throws InvalidVertexException {
         return dependenciesGraph.getAllDependencies().entrySet().stream()
                 .filter(entry -> entry.getValue().contains(inbound.element()))
-                .map(entry -> new DependencyEdge(entry.getKey(), inbound.element(), null))
+                .map(entry -> new DependencyEdge(entry.getKey(), inbound.element()))
                 .collect(Collectors.toSet());
     }
 
     @Override
     public Collection<Edge<String, String>> outboundEdges(Vertex<String> outbound) throws InvalidVertexException {
         return dependenciesGraph.getClassDependencies(outbound.element()).stream()
-                .map(dependencyName -> new DependencyEdge(outbound.element(), dependencyName, ""))
+                .map(dependencyName -> new DependencyEdge(outbound.element(), dependencyName))
                 .collect(Collectors.toSet());
     }
 
