@@ -91,7 +91,8 @@ public class ReactiveDependencyFinder {
 
             var className = classFile.getFileName().toString().replace(".java", "");
 
-            return new AbstractMap.SimpleImmutableEntry<String, Set<String>>(className, dependencies);
+            return new AbstractMap.SimpleImmutableEntry<String, Set<String>>(packageName + "." + className,
+                    dependencies);
         } catch (Exception e) {
             LOGGER.error("Error processing class file: " + classFile, e);
             throw new RuntimeException("Error processing class file: " + classFile, e);
