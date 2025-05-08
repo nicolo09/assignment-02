@@ -51,4 +51,9 @@ public class DependencyEdge implements Edge<String, String> {
         return false;
     }
 
+    @Override
+    public int hashCode() {
+        return className.hashCode() + dependencyName.hashCode();
+    }
+
 }

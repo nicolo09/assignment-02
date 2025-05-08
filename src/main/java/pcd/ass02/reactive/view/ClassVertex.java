@@ -26,4 +26,9 @@ public class ClassVertex implements Vertex<String> {
         return false;
     }
 
+    @Override
+    public int hashCode() {
+        return className.hashCode();
+    }
+
 }
