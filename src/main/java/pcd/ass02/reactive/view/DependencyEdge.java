@@ -1,9 +1,6 @@
 package pcd.ass02.reactive.view;
 
-import java.util.List;
-
 import com.brunomnsilva.smartgraph.graph.Edge;
-import com.brunomnsilva.smartgraph.graph.Vertex;
 
 public class DependencyEdge implements Edge<String, String> {
 
