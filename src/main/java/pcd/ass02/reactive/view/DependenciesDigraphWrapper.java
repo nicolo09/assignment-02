@@ -63,10 +63,16 @@ public class DependenciesDigraphWrapper implements Digraph<String, String> {
     @Override
     public Vertex<String> opposite(Vertex<String> v, Edge<String, String> e)
             throws InvalidVertexException, InvalidEdgeException {
-        if (dependenciesGraph.getClassDependencies(v.element()).contains(e.vertices()[1].element())) {
-            return e.vertices()[1];
+        if (e.vertices()[0].element().equals(v.element()) || e.vertices()[1].element().equals(v.element())) {
+            // If the vertex is the outbound vertex, return the inbound vertex.
+            if (e.vertices()[0].element().equals(v.element())) {
+                return new ClassVertex(e.vertices()[1].element());
+            } else {
+                // If the vertex is the inbound vertex, return the outbound vertex.
+                return new ClassVertex(e.vertices()[0].element());
+            }
         } else {
-            return null;
+            throw new InvalidVertexException("The vertex is not part of the edge.");
         }
     }
 
