@@ -24,6 +24,7 @@ import io.reactivex.rxjava3.core.Observable;
 public class ReactiveDependencyFinder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReactiveDependencyFinder.class);
+    private static final String FILE_EXTENSION = ".java";
 
     public Observable<Entry<String, Set<String>>> findAllClassesDependencies(final Path projectDirectory) {
         // Create an observable that emits dependencies found in the project directory
@@ -34,7 +35,7 @@ public class ReactiveDependencyFinder {
             new Thread(() -> {
                 try (Stream<Path> filesStream = Files.walk(projectDirectory)) {
                     filesStream.filter(Files::isRegularFile)
-                            .filter(path -> path.toString().endsWith(".java"))
+                            .filter(path -> path.toString().endsWith(FILE_EXTENSION))
                             .forEach(classFile -> {
                                 try {
                                     Entry<String, Set<String>> dependency = getClassDependencies(classFile);
@@ -80,7 +81,7 @@ public class ReactiveDependencyFinder {
             compilationUnit.findAll(ClassOrInterfaceType.class).forEach(type -> {
                 var typeName = type.getNameAsString();
                 var fullyQualifiedName = packageName + "." + typeName;
-                var classFilePath = classPath + File.separator + typeName + ".java";
+                var classFilePath = classPath + File.separator + typeName + FILE_EXTENSION;
                 if (dependencies.stream().noneMatch(dep -> dep.endsWith("." + typeName))) {
                     if (Files.exists(Paths.get(classFilePath))) {
                         // Add the dependency to the list
@@ -89,7 +90,7 @@ public class ReactiveDependencyFinder {
                 }
             });
 
-            var className = classFile.getFileName().toString().replace(".java", "");
+            var className = classFile.getFileName().toString().replace(FILE_EXTENSION, "");
 
             return new AbstractMap.SimpleImmutableEntry<String, Set<String>>(packageName + "." + className,
                     dependencies);
