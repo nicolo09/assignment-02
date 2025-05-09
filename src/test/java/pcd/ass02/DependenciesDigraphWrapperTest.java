@@ -67,7 +67,8 @@ public class DependenciesDigraphWrapperTest {
 
     @Test
     void testOpposite() {
-        assertNull(dependenciesDigraphWrapper.opposite(new ClassVertex("A"), new DependencyEdge("A","B")));
+        assertEquals(dependenciesDigraphWrapper.opposite(new ClassVertex("A"), new DependencyEdge("A","B")), new ClassVertex("B"));
+        assertNull(dependenciesDigraphWrapper.opposite(new ClassVertex("B"), new DependencyEdge("A","B")));
     }
 
 }

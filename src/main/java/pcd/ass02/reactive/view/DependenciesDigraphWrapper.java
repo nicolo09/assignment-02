@@ -63,15 +63,24 @@ public class DependenciesDigraphWrapper implements Digraph<String, String> {
     @Override
     public Vertex<String> opposite(Vertex<String> v, Edge<String, String> e)
             throws InvalidVertexException, InvalidEdgeException {
-        if (e.vertices()[0].element().equals(v.element()) || e.vertices()[1].element().equals(v.element())) {
-            // If the vertex is the outbound vertex, return the inbound vertex.
-            if (e.vertices()[0].element().equals(v.element())) {
-                return new ClassVertex(e.vertices()[1].element());
+        if (!this.vertices().contains(v)) {
+            // Check if the vertex is part of the graph.
+            throw new InvalidVertexException("The vertex is not part of the graph.");
+        } else if (!dependenciesGraph.getClassDependencies(e.vertices()[0].element())
+                .contains(e.vertices()[1].element())) {
+            // Check if the edge is part of the graph.
+            throw new InvalidEdgeException("The edge is not part of the graph.");
+        } else if (e.vertices()[0].element().equals(v.element()) || e.vertices()[1].element().equals(v.element())) {
+            // Check if the outbound vertex has an edge to the inbound vertex.
+            Vertex<String> inbound = e.vertices()[0].element().equals(v.element()) ? e.vertices()[1] : e.vertices()[0];
+            Vertex<String> outbound = e.vertices()[1].element().equals(v.element()) ? e.vertices()[1] : e.vertices()[0];
+            if (dependenciesGraph.getClassDependencies(outbound.element()).contains(inbound.element())) {
+                return inbound;
             } else {
-                // If the vertex is the inbound vertex, return the outbound vertex.
-                return new ClassVertex(e.vertices()[0].element());
+                return null;
             }
         } else {
+            // If the vertex is not part of the edge.
             throw new InvalidVertexException("The vertex is not part of the edge.");
         }
     }
