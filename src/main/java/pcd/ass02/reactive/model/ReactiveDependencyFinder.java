@@ -41,7 +41,7 @@ public class ReactiveDependencyFinder {
             // TODO: Passare un qualche observable qui che riceva il comando di chiusura
             // dell'emitter su cui chiamiamo l'onComplete() e l'interrupt del thread, le
             // risorse in teoria sono chiuse in automatico dai try-with-resources
-            new Thread(() -> {
+            final Thread thread = new Thread(() -> {
                 try (Stream<Path> filesStream = Files.walk(projectDirectory)) {
                     filesStream.filter(Files::isRegularFile)
                             .filter(path -> path.toString().endsWith(FILE_EXTENSION))
@@ -105,7 +105,9 @@ public class ReactiveDependencyFinder {
                 }
                 
                 // TODO: Something to stop the thread
-            }).start();
+            });
+            thread.setDaemon(true); //TODO: is setting the thread as daemon fine? 
+            thread.start();
         });
     }
 
