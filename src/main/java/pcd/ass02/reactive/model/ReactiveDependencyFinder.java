@@ -1,9 +1,17 @@
 package pcd.ass02.reactive.model;
 
 import java.io.File;
+import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.WatchEvent;
+import java.nio.file.WatchKey;
+import java.nio.file.WatchService;
+
+import static java.nio.file.StandardWatchEventKinds.*;
+import static com.sun.nio.file.ExtendedWatchEventModifier.FILE_TREE;
+
 import java.util.AbstractMap;
 import java.util.HashSet;
 import java.util.Set;
@@ -20,13 +28,14 @@ import com.github.javaparser.ast.ImportDeclaration;
 import com.github.javaparser.ast.type.ClassOrInterfaceType;
 
 import io.reactivex.rxjava3.core.Observable;
+import pcd.ass02.reactive.model.ClassDependencyInfo.DependencyChangeType;
 
 public class ReactiveDependencyFinder {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(ReactiveDependencyFinder.class);
     private static final String FILE_EXTENSION = ".java";
 
-    public Observable<Entry<String, Set<String>>> findAllClassesDependencies(final Path projectDirectory) {
+    public Observable<ClassDependencyInfo> findAllClassesDependencies(final Path projectDirectory) {
         // Create an observable that emits dependencies found in the project directory
         return Observable.create(emitter -> {
             // TODO: Passare un qualche observable qui che riceva il comando di chiusura
@@ -37,10 +46,11 @@ public class ReactiveDependencyFinder {
                     filesStream.filter(Files::isRegularFile)
                             .filter(path -> path.toString().endsWith(FILE_EXTENSION))
                             .forEach(classFile -> {
+                                LOGGER.info("Processing file: " + classFile);
                                 try {
                                     Entry<String, Set<String>> dependency = getClassDependencies(classFile);
                                     LOGGER.info("Found dependencies of: " + dependency.getKey());
-                                    emitter.onNext(dependency);
+                                    emitter.onNext(new ClassDependencyInfo(dependency, DependencyChangeType.DISCOVER, classFile));
                                 } catch (Exception e) {
                                     LOGGER.error("Error processing file: " + classFile, e);
                                     emitter.onError(e);
@@ -50,7 +60,50 @@ public class ReactiveDependencyFinder {
                     LOGGER.error("Error finding dependencies: ", e);
                     emitter.onError(e);
                 }
-                // TODO: Register for file changes in the project directory
+
+                // Dopo aver processato tutti i file, continiamo a controllare per nuovi
+                // file o modifiche di quelli esistenti
+                try (WatchService ws = FileSystems.getDefault().newWatchService()) {
+                    projectDirectory.register(ws,
+                                new WatchEvent.Kind[] { ENTRY_MODIFY, ENTRY_CREATE, ENTRY_DELETE },
+                                FILE_TREE);
+                        LOGGER.info("Watching directory: " + projectDirectory);
+                        while (true) {
+                            //TODO: fermare il ciclo
+                            WatchKey k = ws.take();
+                            for (WatchEvent<?> event : k.pollEvents()) {
+                                Object classObject = event.context();
+                                LOGGER.info(event.kind().toString() + " " + event.count() + " " + classObject);
+                                if (classObject.toString().endsWith(FILE_EXTENSION)) {
+                                    var classFile = Path.of(projectDirectory + File.separator + classObject.toString());
+                                    var changeType = event.kind() == ENTRY_CREATE 
+                                            ? DependencyChangeType.CREATE
+                                            : event.kind() == ENTRY_MODIFY 
+                                                    ? DependencyChangeType.MODIFY
+                                                    : DependencyChangeType.DELETE;
+                                    try {
+                                        // nodo dipende da esso (limitatamente a dipendenze esternerne) 
+                                        // il rename viene considerato come delete del file originale e creazione di un nuovo file
+                                        if(changeType != DependencyChangeType.DELETE) {
+                                            Entry<String, Set<String>> dependency = getClassDependencies(classFile);
+                                            LOGGER.info("Found dependencies of: " + dependency.getKey());
+                                            emitter.onNext(new ClassDependencyInfo(dependency, changeType, classFile));
+                                        } else {
+                                            LOGGER.info("Class: " + classObject.toString() + " has been deleted");
+                                            emitter.onNext(new ClassDependencyInfo(null, changeType, classFile));
+                                        } 
+                                    } catch (Exception e) {
+                                        LOGGER.error("Error processing file: " + classFile, e);
+                                        emitter.onError(e);
+                                    }
+                                }
+                            }
+                            k.reset();
+                        }
+                } catch (Exception e) {
+                    //TODO handle exception
+                }
+                
                 // TODO: Something to stop the thread
             }).start();
         });
@@ -92,8 +145,9 @@ public class ReactiveDependencyFinder {
 
             var className = classFile.getFileName().toString().replace(FILE_EXTENSION, "");
 
-            return new AbstractMap.SimpleImmutableEntry<String, Set<String>>(packageName + "." + className,
-                    dependencies);
+            var fullyQualifiedName = packageName.isEmpty() ? className : packageName + "." + className;
+
+            return new AbstractMap.SimpleImmutableEntry<String, Set<String>>(fullyQualifiedName, dependencies);
         } catch (Exception e) {
             LOGGER.error("Error processing class file: " + classFile, e);
             throw new RuntimeException("Error processing class file: " + classFile, e);

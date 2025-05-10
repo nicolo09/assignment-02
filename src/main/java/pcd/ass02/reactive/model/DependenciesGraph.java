@@ -27,7 +27,7 @@ public class DependenciesGraph {
 
     public void addAllDependency(String className, Set<String> dependencyNames) {
         // If the class already exists, update the dependency set
-        if (dependencies.containsKey(className)) {
+        if (dependencies.containsKey(className) && dependencyNames.containsAll(dependencies.get(className))) { //FIXME: leave this or remove if-else and use only put?
             dependencies.get(className).addAll(dependencyNames);
         } else {
             // If the class does not exist, create a new entry in the map
@@ -41,6 +41,10 @@ public class DependenciesGraph {
         if (dependencies.get(className).isEmpty()) {
             dependencies.remove(className);
         }
+    }
+
+    public void removeClass(String className) {
+        dependencies.remove(className);
     }
 
     public Set<String> getClassDependencies(String className) {
