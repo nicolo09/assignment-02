@@ -1,6 +1,6 @@
 package pcd.ass02.reactive.view;
 
-import com.brunomnsilva.smartgraph.graph.Graph;
+import com.brunomnsilva.smartgraph.graph.Digraph;
 import com.brunomnsilva.smartgraph.graphview.SmartCircularSortedPlacementStrategy;
 import com.brunomnsilva.smartgraph.graphview.SmartGraphPanel;
 import com.brunomnsilva.smartgraph.graphview.SmartPlacementStrategy;
@@ -26,10 +26,14 @@ public class DependencyViewImpl implements DependencyView {
     private static final int HEIGHT = 600;
     private static final int TOP_HEIGHT_FRAC = 10;
     private static final boolean RESIZABLE = true;
+
     private final Stage primaryStage;
     private BorderPane rootBorderPane;
     private SmartGraphPanel<String, String> graphView;
     private final DependenciesGraph dependenciesGraph;
+    private Button startButton;
+    private Button selectDirectoryButton;
+    private Button stopButton;
 
     private DependencyController controller;
 
@@ -57,7 +61,7 @@ public class DependencyViewImpl implements DependencyView {
         Label selectedDirectoryLabel = new Label("Selected Directory: ");
 
         // Select directory button
-        Button selectDirectoryButton = new Button("Select Directory");
+        this.selectDirectoryButton = new Button("Select Directory");
         selectDirectoryButton.setMinSize(Button.USE_PREF_SIZE, Button.USE_PREF_SIZE); // Disable resizing below elision
         final DirectoryChooser directoryChooser = new DirectoryChooser();
         selectDirectoryButton.setOnAction(event -> {
@@ -67,25 +71,36 @@ public class DependencyViewImpl implements DependencyView {
             }
         });
 
+        // Stop button
+        this.stopButton = new Button("Stop");
+        this.stopButton.setDisable(true);
+        this.stopButton.setMinSize(Button.USE_PREF_SIZE, Button.USE_PREF_SIZE); // Disable resizing below elision
+        this.stopButton.setOnAction(event -> {
+            controller.stopAnalysis();
+        });
+
         // Start button
-        Button startButton = new Button("Start");
-        startButton.setMinSize(Button.USE_PREF_SIZE, Button.USE_PREF_SIZE); // Disable resizing below elision
-        startButton.setOnAction(event -> {
+        this.startButton = new Button("Start");
+        this.startButton.setMinSize(Button.USE_PREF_SIZE, Button.USE_PREF_SIZE); // Disable resizing below elision
+        this.startButton.setOnAction(event -> {
+            this.startButton.setDisable(true);
+            this.selectDirectoryButton.setDisable(true);
+            this.stopButton.setDisable(false);
             controller.startAnalysis();
         });
 
         // Top panel
-        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, startButton);
+        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, startButton, stopButton);
         top.setPadding(new Insets(15, 12, 15, 12));
         top.setSpacing(10);
         top.setAlignment(javafx.geometry.Pos.CENTER);
         top.setPrefSize(WIDTH, HEIGHT / TOP_HEIGHT_FRAC);
 
-        Graph<String, String> g = new DependenciesDigraphWrapper(dependenciesGraph);
+        Digraph<String, String> graph = new DependenciesDigraphWrapper(dependenciesGraph);
         SmartPlacementStrategy initialPlacement = new SmartCircularSortedPlacementStrategy();
-        this.graphView = new SmartGraphPanel<>(g, initialPlacement);
+        this.graphView = new SmartGraphPanel<>(graph, initialPlacement);
         this.graphView.setAutomaticLayout(true);
-        
+
         // Main border pane
         rootBorderPane = new BorderPane();
         rootBorderPane.setPadding(new Insets(10, 10, 10, 10));
@@ -114,4 +129,13 @@ public class DependencyViewImpl implements DependencyView {
         graphView.update();
     }
 
+    @Override
+    public void stopAnalysis() {
+        Platform.runLater(() -> {
+            graphView.update();
+            startButton.setDisable(false);
+            selectDirectoryButton.setDisable(false);
+            stopButton.setDisable(true);
+        });
+    }
 }

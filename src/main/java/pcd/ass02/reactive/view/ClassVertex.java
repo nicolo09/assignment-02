@@ -1,5 +1,7 @@
 package pcd.ass02.reactive.view;
 
+import java.util.Objects;
+
 import com.brunomnsilva.smartgraph.graph.Vertex;
 
 public class ClassVertex implements Vertex<String> {
@@ -28,7 +30,7 @@ public class ClassVertex implements Vertex<String> {
 
     @Override
     public int hashCode() {
-        return className.hashCode();
+        return Objects.hash(className);
     }
 
 }

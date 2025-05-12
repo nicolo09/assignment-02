@@ -1,5 +1,7 @@
 package pcd.ass02.reactive.view;
 
+import java.util.Objects;
+
 import com.brunomnsilva.smartgraph.graph.Edge;
 
 public class DependencyEdge implements Edge<String, String> {
@@ -53,7 +55,7 @@ public class DependencyEdge implements Edge<String, String> {
 
     @Override
     public int hashCode() {
-        return className.hashCode() + dependencyName.hashCode();
+        return Objects.hash(className.hashCode(), dependencyName.hashCode());
     }
 
 }

@@ -25,9 +25,20 @@ public class DependenciesGraph {
         }
     }
 
-    public void addAllDependency(String className, Set<String> dependencyNames) {
+    public void setDependencies(String className, Set<String> dependencyNames) {
         // If the class already exists, update the dependency set
-        if (dependencies.containsKey(className) && dependencyNames.containsAll(dependencies.get(className))) { //FIXME: leave this or remove if-else and use only put?
+        if (dependencies.containsKey(className)) {
+            dependencies.get(className).clear();
+            dependencies.get(className).addAll(dependencyNames);
+        } else {
+            // If the class does not exist, create a new entry in the map
+            dependencies.put(className, new HashSet<>(dependencyNames));
+        }
+    }
+
+    public void addAllDependencies(String className, Set<String> dependencyNames) {
+        // If the class already exists, update the dependency set
+        if (dependencies.containsKey(className)) {
             dependencies.get(className).addAll(dependencyNames);
         } else {
             // If the class does not exist, create a new entry in the map
@@ -53,6 +64,10 @@ public class DependenciesGraph {
 
     public Map<String, Set<String>> getAllDependencies() {
         return dependencies;
+    }
+
+    public void empty() {
+        dependencies.clear();
     }
 
 }

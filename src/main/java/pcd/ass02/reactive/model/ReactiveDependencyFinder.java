@@ -35,6 +35,15 @@ public class ReactiveDependencyFinder {
     private static final Logger LOGGER = LoggerFactory.getLogger(ReactiveDependencyFinder.class);
     private static final String FILE_EXTENSION = ".java";
 
+    /**
+     * Finds all classes dependencies in the given project directory.
+     * The method returns an Observable that emits ClassDependencyInfo objects
+     * representing the dependencies found in the project directory, reacting to
+     * changes in the directory.
+     * 
+     * @param projectDirectory
+     * @return the observable that emits ClassDependencyInfo objects
+     */
     public Observable<ClassDependencyInfo> findAllClassesDependencies(final Path projectDirectory) {
         // Create an observable that emits dependencies found in the project directory
         return Observable.create(emitter -> {
@@ -50,7 +59,8 @@ public class ReactiveDependencyFinder {
                                 try {
                                     Entry<String, Set<String>> dependency = getClassDependencies(classFile);
                                     LOGGER.info("Found dependencies of: " + dependency.getKey());
-                                    emitter.onNext(new ClassDependencyInfo(dependency, DependencyChangeType.DISCOVER, classFile));
+                                    emitter.onNext(new ClassDependencyInfo(dependency, DependencyChangeType.DISCOVER,
+                                            classFile));
                                 } catch (Exception e) {
                                     LOGGER.error("Error processing file: " + classFile, e);
                                     emitter.onError(e);
@@ -65,48 +75,65 @@ public class ReactiveDependencyFinder {
                 // file o modifiche di quelli esistenti
                 try (WatchService ws = FileSystems.getDefault().newWatchService()) {
                     projectDirectory.register(ws,
-                                new WatchEvent.Kind[] { ENTRY_MODIFY, ENTRY_CREATE, ENTRY_DELETE },
-                                FILE_TREE);
-                        LOGGER.info("Watching directory: " + projectDirectory);
-                        while (true) {
-                            //TODO: fermare il ciclo
-                            WatchKey k = ws.take();
-                            for (WatchEvent<?> event : k.pollEvents()) {
-                                Object classObject = event.context();
-                                LOGGER.info(event.kind().toString() + " " + event.count() + " " + classObject);
-                                if (classObject.toString().endsWith(FILE_EXTENSION)) {
-                                    var classFile = Path.of(projectDirectory + File.separator + classObject.toString());
-                                    var changeType = event.kind() == ENTRY_CREATE 
-                                            ? DependencyChangeType.CREATE
-                                            : event.kind() == ENTRY_MODIFY 
-                                                    ? DependencyChangeType.MODIFY
-                                                    : DependencyChangeType.DELETE;
-                                    try {
-                                        // nodo dipende da esso (limitatamente a dipendenze esternerne) 
-                                        // il rename viene considerato come delete del file originale e creazione di un nuovo file
-                                        if(changeType != DependencyChangeType.DELETE) {
-                                            Entry<String, Set<String>> dependency = getClassDependencies(classFile);
-                                            LOGGER.info("Found dependencies of: " + dependency.getKey());
-                                            emitter.onNext(new ClassDependencyInfo(dependency, changeType, classFile));
-                                        } else {
-                                            LOGGER.info("Class: " + classObject.toString() + " has been deleted");
-                                            emitter.onNext(new ClassDependencyInfo(null, changeType, classFile));
-                                        } 
-                                    } catch (Exception e) {
-                                        LOGGER.error("Error processing file: " + classFile, e);
-                                        emitter.onError(e);
+                            new WatchEvent.Kind[] { ENTRY_MODIFY, ENTRY_CREATE, ENTRY_DELETE },
+                            FILE_TREE);
+                    LOGGER.info("Watching directory: " + projectDirectory);
+                    while (!Thread.currentThread().isInterrupted()) {
+                        // Wait for a key to be available
+                        WatchKey k = ws.take();
+                        for (WatchEvent<?> event : k.pollEvents()) {
+                            Object classObject = event.context();
+                            LOGGER.info(event.kind().toString() + " " + event.count() + " " + classObject);
+                            if (classObject.toString().endsWith(FILE_EXTENSION)) {
+                                var classFile = Path.of(projectDirectory + File.separator + classObject.toString());
+                                var changeType = event.kind() == ENTRY_CREATE
+                                        ? DependencyChangeType.CREATE
+                                        : event.kind() == ENTRY_MODIFY
+                                                ? DependencyChangeType.MODIFY
+                                                : DependencyChangeType.DELETE;
+                                try {
+                                    // nodo dipende da esso (limitatamente a dipendenze esternerne)
+                                    // il rename viene considerato come delete del file originale e creazione di un
+                                    // nuovo file
+                                    if (changeType != DependencyChangeType.DELETE) {
+                                        Entry<String, Set<String>> dependency = getClassDependencies(classFile);
+                                        LOGGER.info("Found dependencies of: " + dependency.getKey());
+                                        emitter.onNext(new ClassDependencyInfo(dependency, changeType, classFile));
+                                    } else {
+                                        LOGGER.info("Class: " + classObject.toString() + " has been deleted");
+                                        emitter.onNext(new ClassDependencyInfo(null, changeType, classFile));
                                     }
+                                } catch (Exception e) {
+                                    LOGGER.error("Error processing file: " + classFile, e);
+                                    emitter.onError(e);
                                 }
                             }
-                            k.reset();
                         }
+                        k.reset();
+                    }
+                } catch (InterruptedException e) {
+                    // TODO handle exception
+                    LOGGER.info("Thread interrupted, stopping analysis");
                 } catch (Exception e) {
-                    //TODO handle exception
+                    LOGGER.error("Error watching directory: ", e);
+                    emitter.onError(e);
+                } finally {
+                    // Close the emitter when the thread is interrupted
+                    LOGGER.info("Stopping analysis thread and completing emitter");
+                    emitter.onComplete();
                 }
-                
-                // TODO: Something to stop the thread
             });
-            thread.setDaemon(true); //TODO: is setting the thread as daemon fine? 
+            emitter.setCancellable(() -> {
+                // Close the emitter when the thread is interrupted
+                LOGGER.info("Interrupting analysis thread");
+                thread.interrupt();
+                try {
+                    thread.join();
+                    LOGGER.info("Analysis thread interrupted");
+                } catch (InterruptedException e) {
+                    LOGGER.error("Error interrupting analysis thread: ", e);
+                }
+            });
             thread.start();
         });
     }

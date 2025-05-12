@@ -6,6 +6,8 @@ import java.util.Map;
 
 import org.slf4j.LoggerFactory;
 
+import io.reactivex.rxjava3.disposables.Disposable;
+
 import org.slf4j.Logger;
 
 import pcd.ass02.reactive.model.DependenciesGraph;
@@ -21,6 +23,7 @@ public class DependencyController {
     private final ReactiveDependencyFinder depsFinder;
     private final DependenciesGraph dependenciesGraph;
     private final Map<Path, String> classMap;
+    private Disposable disposable;
 
     public DependencyController(final ReactiveDependencyFinder depsFinder, final DependenciesGraph dependenciesGraph) {
         this.depsFinder = depsFinder;
@@ -40,27 +43,30 @@ public class DependencyController {
     }
 
     public void startAnalysis() {
+        if (disposable != null && !disposable.isDisposed()) {
+            throw new IllegalStateException("Analysis already running");
+        }
         // Start the analysis process
         LOGGER.info("Starting analysis for project directory: " + projectDirectory);
         if (projectDirectory != null) {
             // Set the dependencies graph in the view
-            depsFinder.findAllClassesDependencies(projectDirectory).subscribe(dependencyInfo -> {
+            disposable = depsFinder.findAllClassesDependencies(projectDirectory).subscribe(dependencyInfo -> {
                 var dependency = dependencyInfo.getDependency();
                 switch (dependencyInfo.getType()) {
                     // For each dependency found, add it to the dependencies graph
                     case DISCOVER, CREATE, MODIFY -> {
                         // Checks the name mapped to the analyzed file
                         var oldClassName = classMap.get(dependencyInfo.getClassPath());
-                        if(oldClassName == null) {
+                        if (oldClassName == null) {
                             // If the class is not already in the map, add it
                             classMap.put(dependencyInfo.getClassPath(), dependency.getKey());
                         } else if (!oldClassName.equals(dependency.getKey())) {
-                            // If the class is already in the map but with a different name, 
+                            // If the class is already in the map but with a different name,
                             // remove the old class name from the graph and add the new one
                             dependenciesGraph.removeClass(oldClassName);
                             classMap.put(dependencyInfo.getClassPath(), dependency.getKey());
                         }
-                        dependenciesGraph.addAllDependency(dependency.getKey(), dependency.getValue());
+                        dependenciesGraph.setDependencies(dependency.getKey(), dependency.getValue());
                         LOGGER.info(dependency.getKey() + " depends on: " + dependency.getValue());
                     }
                     case DELETE -> {
@@ -80,10 +86,21 @@ public class DependencyController {
             }, () -> {
                 // Analysis completed
                 LOGGER.info("Analysis completed.");
+                view.stopAnalysis();
             });
         } else {
             view.showError("Please select a project directory first.");
         }
     }
 
+    public void stopAnalysis() {
+        // Stop the analysis process
+        if (disposable != null && !disposable.isDisposed()) {
+            disposable.dispose();
+            LOGGER.info("Analysis stopped.");
+        }
+        dependenciesGraph.empty();
+        classMap.clear();
+        view.stopAnalysis();
+    }
 }
