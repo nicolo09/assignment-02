@@ -55,7 +55,6 @@ public class DependenciesDigraphWrapper implements Digraph<String, String> {
         // The edges are the dependencies in the graph.
         return dependenciesGraph.getAllDependencies().entrySet().stream()
                 .flatMap(d -> d.getValue().stream()
-                        // TODO: Add a label to the edge
                         .map(dependencyName -> new DependencyEdge(d.getKey(), dependencyName)))
                 .collect(Collectors.toSet());
     }

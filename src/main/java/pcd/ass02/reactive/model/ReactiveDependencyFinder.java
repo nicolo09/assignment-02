@@ -47,9 +47,6 @@ public class ReactiveDependencyFinder {
     public Observable<ClassDependencyInfo> findAllClassesDependencies(final Path projectDirectory) {
         // Create an observable that emits dependencies found in the project directory
         return Observable.create(emitter -> {
-            // TODO: Passare un qualche observable qui che riceva il comando di chiusura
-            // dell'emitter su cui chiamiamo l'onComplete() e l'interrupt del thread, le
-            // risorse in teoria sono chiuse in automatico dai try-with-resources
             final Thread thread = new Thread(() -> {
                 try (Stream<Path> filesStream = Files.walk(projectDirectory)) {
                     filesStream.filter(Files::isRegularFile)
@@ -112,7 +109,6 @@ public class ReactiveDependencyFinder {
                         k.reset();
                     }
                 } catch (InterruptedException e) {
-                    // TODO handle exception
                     LOGGER.info("Thread interrupted, stopping analysis");
                 } catch (Exception e) {
                     LOGGER.error("Error watching directory: ", e);

@@ -31,7 +31,15 @@ import pcd.ass02.async.common.reports.ProjectDepsReport;
  */
 public class DependencyAnalyzer {
 
-    private final Vertx vertx; // TODO: Valutare quando si deploya il verticle
+    /*
+     * Since this is a library class we cannot assume if it will execute standalone
+     * or in a user-deployed verticle. For this reason we need check if the current
+     * context is null and create a new Vertx instance if it is, leaving the
+     * possibility to the user to pass a Vertx instance in constructor if it has
+     * already been created.
+     */
+
+    private final Vertx vertx;
 
     public DependencyAnalyzer() {
         this.vertx = Vertx.currentContext() == null ? Vertx.vertx() : Vertx.currentContext().owner();
@@ -100,38 +108,50 @@ public class DependencyAnalyzer {
                         var packageName = compilationUnit.getPackageDeclaration()
                                 .map(pkg -> pkg.getNameAsString())
                                 .orElse("");
+                        // Checking same package dependencies require an fs.exists() call for each
+                        // dependency, so we start and put them in a list
+                        List<Future<Boolean>> packageFutures = new ArrayList<>();
                         compilationUnit.findAll(ClassOrInterfaceType.class).forEach(type -> {
                             var typeName = type.getNameAsString();
                             var fullyQualifiedName = packageName + "." + typeName;
                             var classFilePath = classPath + File.separator + typeName + ".java";
                             if (dependencies.stream().noneMatch(dep -> dep.endsWith("." + typeName))) {
-                                if (fs.existsBlocking(classFilePath)) { // TODO: Change to async
-                                    // Add the dependency to the list
-                                    dependencies.add(fullyQualifiedName);
-                                }
+                                packageFutures.add(fs.exists(classFilePath).onComplete(res -> {
+                                    if (res.succeeded() && res.result()) {
+                                        // Add the dependency to the list
+                                        dependencies.add(fullyQualifiedName);
+                                    }
+                                }));
                             }
                         });
 
-                        // Filter out dependencies from the excluded package
-                        compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(classDec -> {
-                            var classQualifiedName = classDec.getFullyQualifiedName().get();
-                            if (excludedPackageSrc != null) {
-                                String srcRoot = classSrcFile.replace(".java", ""); // Remove .java extension
-                                // Remove the class name from the path
-                                srcRoot = srcRoot.substring(0, srcRoot.length() - classQualifiedName.length());
-                                String excludedPackage = excludedPackageSrc.replace(srcRoot, "")
-                                        .replace(File.separatorChar, '.');
-                                // Remove all dependencies that start with the excluded package name
-                                dependencies.removeIf(dep -> dep.startsWith(excludedPackage));
+                        // Wait for all futures to complete
+                        Future.all(packageFutures).onComplete(res -> {
+                            if (res.failed()) {
+                                classPromise.fail(res.cause());
+                            } else {
+                                // Filter out dependencies from the excluded package
+                                compilationUnit.findAll(ClassOrInterfaceDeclaration.class).forEach(classDec -> {
+                                    var classQualifiedName = classDec.getFullyQualifiedName().get();
+                                    if (excludedPackageSrc != null) {
+                                        String srcRoot = classSrcFile.replace(".java", ""); // Remove .java extension
+                                        // Remove the class name from the path
+                                        srcRoot = srcRoot.substring(0, srcRoot.length() - classQualifiedName.length());
+                                        String excludedPackage = excludedPackageSrc.replace(srcRoot, "")
+                                                .replace(File.separatorChar, '.');
+                                        // Remove all dependencies that start with the excluded package name
+                                        dependencies.removeIf(dep -> dep.startsWith(excludedPackage));
+                                    }
+                                });
+                                classPromise.complete(new ClassDepsReport(dependencies));
                             }
                         });
+
                     } catch (Exception e) {
                         // Error while parsing the class file
                         classPromise.fail(e);
                         System.err.println("Error parsing class file: " + e.getMessage());
-                        return;
                     }
-                    classPromise.complete(new ClassDepsReport(dependencies));
                 })
                 .onFailure((Throwable t) -> {
                     // Handle the error
