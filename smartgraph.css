@@ -66,19 +66,9 @@ This should help you understand which styles you can apply.
  * cumulatively; in the later case, any properties not wanted from the default "vertex" class
  * must be overwritten.
  */
-.myVertex {
-    -fx-stroke-width: 4;
-    -fx-stroke: green;
+.projectVertex {
+    -fx-stroke-width: 3;
+    -fx-stroke: #800000;
     -fx-stroke-type: inside; /* you should keep this if using arrows */
-    -fx-fill: yellowgreen;
+    -fx-fill: #cd3232;
 }
-
-/* Custom edge class. The same above logic applies to edges.
- */
-.myEdge {
-    -fx-stroke-width: 2;
-    -fx-stroke: red;
-    -fx-opacity: 1;
-    -fx-fill: transparent; /* important to keep for curved edges */
-}
-

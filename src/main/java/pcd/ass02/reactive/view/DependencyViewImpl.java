@@ -1,6 +1,7 @@
 package pcd.ass02.reactive.view;
 
 import com.brunomnsilva.smartgraph.graph.Digraph;
+import com.brunomnsilva.smartgraph.graphview.ForceDirectedSpringSystemLayoutStrategy;
 import com.brunomnsilva.smartgraph.graphview.SmartCircularSortedPlacementStrategy;
 import com.brunomnsilva.smartgraph.graphview.SmartGraphPanel;
 import com.brunomnsilva.smartgraph.graphview.SmartPlacementStrategy;
@@ -11,6 +12,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Alert.AlertType;
 import javafx.scene.control.Button;
+import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
@@ -20,6 +22,12 @@ import pcd.ass02.reactive.controller.DependencyController;
 import pcd.ass02.reactive.model.DependenciesGraph;
 
 public class DependencyViewImpl implements DependencyView {
+
+    // Graph constants
+    private static final double REPULSIVE_FORCE = 5;
+    private static final double ATTRACTION_FORCE = 1;
+    private static final double ATTRACTION_SCALE = 3;
+    private static final double ACCELERATION = 0.6;
 
     private static final String TITLE = "Dependency Analyzer";
     private static final int WIDTH = 800;
@@ -90,8 +98,20 @@ public class DependencyViewImpl implements DependencyView {
             controller.startAnalysis();
         });
 
+        CheckBox autoLayoutCheckBox = new CheckBox("Auto Layout");
+        autoLayoutCheckBox.setSelected(true);
+        autoLayoutCheckBox.setOnAction(event -> {
+            Platform.runLater(() -> {
+                if (autoLayoutCheckBox.isSelected()) {
+                    graphView.setAutomaticLayout(true);
+                } else {
+                    graphView.setAutomaticLayout(false);
+                }
+            });
+        });
+
         // Top panel
-        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, startButton, stopButton);
+        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, startButton, stopButton, autoLayoutCheckBox);
         top.setPadding(new Insets(15, 12, 15, 12));
         top.setSpacing(10);
         top.setAlignment(javafx.geometry.Pos.CENTER);
@@ -100,6 +120,8 @@ public class DependencyViewImpl implements DependencyView {
         Digraph<String, String> graph = new DependenciesDigraphWrapper(dependenciesGraph);
         SmartPlacementStrategy initialPlacement = new SmartCircularSortedPlacementStrategy();
         this.graphView = new SmartGraphPanel<>(graph, initialPlacement);
+        this.graphView.setAutomaticLayoutStrategy(new ForceDirectedSpringSystemLayoutStrategy<String>(REPULSIVE_FORCE,
+                ATTRACTION_FORCE, ATTRACTION_SCALE, ACCELERATION));
         this.graphView.setAutomaticLayout(true);
 
         // Main border pane
@@ -129,6 +151,7 @@ public class DependencyViewImpl implements DependencyView {
     public void updateDependencyGraph() {
         Platform.runLater(() -> {
             graphView.update();
+            dependenciesGraph.getAllDependencies().keySet().forEach(v-> graphView.getStylableVertex(v).setStyleClass("projectVertex"));
         });
     }
 
