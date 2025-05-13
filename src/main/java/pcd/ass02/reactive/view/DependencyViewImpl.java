@@ -1,7 +1,5 @@
 package pcd.ass02.reactive.view;
 
-import org.checkerframework.checker.units.qual.s;
-
 import com.brunomnsilva.smartgraph.graph.Digraph;
 import com.brunomnsilva.smartgraph.graphview.SmartCircularSortedPlacementStrategy;
 import com.brunomnsilva.smartgraph.graphview.SmartGraphPanel;
