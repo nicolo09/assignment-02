@@ -1,0 +1,59 @@
+\documentclass[11pt,notitlepage]{article}
+\usepackage[a4paper, margin={2cm, 2.2cm}]{geometry}
+\usepackage[a-2b]{pdfx}[2018/12/22]
+\usepackage{alltt, fancyvrb, url}
+\usepackage{graphicx}
+\usepackage[utf8]{inputenc}
+\usepackage{float}
+\usepackage{hyperref}
+\usepackage{subcaption}
+\usepackage{numprint}
+\usepackage{slashbox}
+\usepackage{pgfplots}
+\usepackage{amsmath}
+\usepackage{lipsum}
+\usepackage{tikz}
+\pgfplotsset{compat=1.9,
+            tick label style={font=\tiny},
+            label style={font=\tiny}}
+
+% Questo commentalo se vuoi scrivere in inglese.
+\usepackage[italian]{babel}
+
+\usepackage[italian]{cleveref}
+
+\title{Programmazione concorrente e distribuita \\ Assignment 02}
+
+\author{
+    \href{mailto:nicolo.guerra@studio.unibo.it}{Nicolò Guerra, matricola 0001179571} \\
+    \href{mailto:filippo.casadei9@studio.unibo.it}{Filippo Casadei, matricola 0001179572} \\
+    \href{mailto:emma.leonardi2@studio.unibo.it}{Emma Leonardi, matricola 0001193227}
+    }
+\date{\today}
+
+\begin{document}
+\maketitle
+\renewcommand{\thesection}{\arabic{section}}
+\section{Analisi del problema}
+
+L'assignment riguarda la creazione di due artefatti differenti: una libreria per la ricerca asincrona di dipendenze in classi, package e progetti Java e una applicazione
+reattiva per la visualizzazione delle dipendenze di progetti Java.
+
+\section{Versione asincrona}
+//TODO: scrivere meglio parte di analisi del problema
+Il problema principale della versione asincrona riguarda l'analisi dei file \texttt{.java}, in particolare è importante che le letture da file non blocchino il sistema e che vengano
+eseguite concorrentemente al flusso del programma per evitare di bloccare il sistema.
+
+Per la libreria è stato utilizzato il framework \texttt{Vertx} che offre supporto alla creazione di sistemi asincroni. In particolare la libreria è formata da un oggetto 
+\texttt{DependencyAnalyzer} che si occupa di analizzare i file \texttt{.java} e di restituire le dipendenze in modo asincrono. Fornisce tre metodi principali:
+\begin{itemize}
+    \item \texttt{getClassDependencies}: cerca le dipendenze di una classe
+    \item \texttt{getPackageDependencies}: cerca le dipendenze che le classi di un package hanno verso tipi esterni ad esso
+    \item \texttt{getProjectDependencies}: cerca le dipendenze che le classi di un progetto hanno verso tipi esterni ad esso
+\end{itemize}
+Ogni metodo ritorna un Future generico sul tipo di report che il metodo produce
+
+\section{Conclusioni}
+
+
+\end{document}
