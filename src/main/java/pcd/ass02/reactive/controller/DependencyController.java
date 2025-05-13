@@ -34,6 +34,10 @@ public class DependencyController {
     public void setProjectDirectory(final Path projectDirectory) {
         // Set the project directory for analysis
         this.projectDirectory = projectDirectory;
+        // Set the directory in the view
+        if (view != null) {
+            view.setDirectory(projectDirectory.toString());
+        }
         LOGGER.info("Project directory set to: " + projectDirectory);
     }
 

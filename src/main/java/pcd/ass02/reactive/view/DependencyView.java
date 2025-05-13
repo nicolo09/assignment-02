@@ -14,4 +14,5 @@ public interface DependencyView {
 
     void stopAnalysis();
 
+    void setDirectory(String directoryPath);
 }

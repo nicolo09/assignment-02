@@ -1,5 +1,7 @@
 package pcd.ass02.reactive.view;
 
+import org.checkerframework.checker.units.qual.s;
+
 import com.brunomnsilva.smartgraph.graph.Digraph;
 import com.brunomnsilva.smartgraph.graphview.SmartCircularSortedPlacementStrategy;
 import com.brunomnsilva.smartgraph.graphview.SmartGraphPanel;
@@ -34,6 +36,7 @@ public class DependencyViewImpl implements DependencyView {
     private Button startButton;
     private Button selectDirectoryButton;
     private Button stopButton;
+    private Label selectedDirectoryLabel;
 
     private DependencyController controller;
 
@@ -58,7 +61,7 @@ public class DependencyViewImpl implements DependencyView {
 
     private Scene getMainScene() {
         // Selected directory label
-        Label selectedDirectoryLabel = new Label("Selected Directory: ");
+        selectedDirectoryLabel = new Label("Selected Directory: ");
 
         // Select directory button
         this.selectDirectoryButton = new Button("Select Directory");
@@ -126,7 +129,9 @@ public class DependencyViewImpl implements DependencyView {
 
     @Override
     public void updateDependencyGraph() {
-        graphView.update();
+        Platform.runLater(() -> {
+            graphView.update();
+        });
     }
 
     @Override
@@ -136,6 +141,13 @@ public class DependencyViewImpl implements DependencyView {
             startButton.setDisable(false);
             selectDirectoryButton.setDisable(false);
             stopButton.setDisable(true);
+        });
+    }
+
+    @Override
+    public void setDirectory(String directoryPath) {
+        Platform.runLater(() -> {
+            selectedDirectoryLabel.setText("Selected Directory: " + directoryPath);
         });
     }
 }
