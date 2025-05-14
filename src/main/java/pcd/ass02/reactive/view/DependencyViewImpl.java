@@ -16,6 +16,7 @@ import javafx.scene.control.CheckBox;
 import javafx.scene.control.Label;
 import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import javafx.stage.Stage;
 import pcd.ass02.reactive.controller.DependencyController;
@@ -35,8 +36,9 @@ public class DependencyViewImpl implements DependencyView {
     private static final int TOP_HEIGHT_FRAC = 10;
     private static final boolean RESIZABLE = true;
 
-    private static final String ANALYZED_CLASSES_LABEL = "Analyzed classes: ";
-    private static final String FOUND_DEPENDENCIES_LABEL = "Found dependencies: ";
+    private static final String ANALYZED_CLASSES_LABEL = "Analyzed project classes (red nodes): ";
+    private static final String EXTERNAL_CLASSES_LABEL = "External dependencies (blue nodes): ";
+    private static final String FOUND_DEPENDENCIES_LABEL = "Total dependencies found (edges): ";
 
     private final Stage primaryStage;
     private BorderPane rootBorderPane;
@@ -46,14 +48,17 @@ public class DependencyViewImpl implements DependencyView {
     private Button selectDirectoryButton;
     private Button stopButton;
     private Label selectedDirectoryLabel;
-    private Label analyzedClassCounterLabel;
+    private Label analyzedProjectClassCounterLabel;
     private Label foundDependencyCounterLabel;
+    private Label externalClassesCounterLabel;
+    private final Digraph<String, String> graph;
 
     private DependencyController controller;
 
     public DependencyViewImpl(final Stage primaryStage, final DependenciesGraph dependenciesGraph) {
         this.primaryStage = primaryStage;
         this.dependenciesGraph = dependenciesGraph;
+        this.graph = new DependenciesDigraphWrapper(dependenciesGraph);
     }
 
     public void setController(final DependencyController controller) {
@@ -115,20 +120,28 @@ public class DependencyViewImpl implements DependencyView {
             });
         });
 
-        //Analyzed class counter label
-        this.analyzedClassCounterLabel = new Label(ANALYZED_CLASSES_LABEL);
+        // Analyzed class counter label
+        this.analyzedProjectClassCounterLabel = new Label(ANALYZED_CLASSES_LABEL);
 
-        //Found dependency counter label
+        // External class counter label
+        this.externalClassesCounterLabel = new Label(EXTERNAL_CLASSES_LABEL);
+
+        // Found dependency counter label
         this.foundDependencyCounterLabel = new Label(FOUND_DEPENDENCIES_LABEL);
 
+        VBox vbox = new VBox(this.analyzedProjectClassCounterLabel, this.externalClassesCounterLabel,
+                this.foundDependencyCounterLabel);
+        vbox.setPadding(new Insets(15, 12, 15, 12));
+        vbox.setMinWidth(ACCELERATION);
+
         // Top panel
-        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, startButton, stopButton, autoLayoutCheckBox, analyzedClassCounterLabel, foundDependencyCounterLabel);
+        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, startButton, stopButton, autoLayoutCheckBox,
+                vbox);
         top.setPadding(new Insets(15, 12, 15, 12));
         top.setSpacing(10);
         top.setAlignment(javafx.geometry.Pos.CENTER);
         top.setPrefSize(WIDTH, HEIGHT / TOP_HEIGHT_FRAC);
 
-        Digraph<String, String> graph = new DependenciesDigraphWrapper(dependenciesGraph);
         SmartPlacementStrategy initialPlacement = new SmartCircularSortedPlacementStrategy();
         this.graphView = new SmartGraphPanel<>(graph, initialPlacement);
         this.graphView.setAutomaticLayoutStrategy(new ForceDirectedSpringSystemLayoutStrategy<String>(REPULSIVE_FORCE,
@@ -162,18 +175,17 @@ public class DependencyViewImpl implements DependencyView {
     public void updateDependencyGraph() {
         Platform.runLater(() -> {
             graphView.update();
-            dependenciesGraph.getAllDependencies().keySet().forEach(v -> { 
+            dependenciesGraph.getAllDependencies().keySet().forEach(v -> {
                 var vertex = graphView.getStylableVertex(v);
                 if (vertex != null) {
                     vertex.setStyleClass("projectVertex");
                 }
             });
-            this.analyzedClassCounterLabel.setText(ANALYZED_CLASSES_LABEL + dependenciesGraph.getAllDependencies().keySet().size());
-            var distinctDependencies = dependenciesGraph.getAllDependencies().values().stream()
-                .flatMap(set -> set.stream())
-                .distinct() //TODO: distinct or not?
-                .count();
-            this.foundDependencyCounterLabel.setText(FOUND_DEPENDENCIES_LABEL + distinctDependencies);
+            this.analyzedProjectClassCounterLabel
+                    .setText(ANALYZED_CLASSES_LABEL + dependenciesGraph.getAllDependencies().keySet().size());
+            this.externalClassesCounterLabel.setText(EXTERNAL_CLASSES_LABEL
+                    + (this.graph.numVertices() - dependenciesGraph.getAllDependencies().keySet().size()));
+            this.foundDependencyCounterLabel.setText(FOUND_DEPENDENCIES_LABEL + this.graph.numEdges());
         });
     }
 
@@ -184,7 +196,8 @@ public class DependencyViewImpl implements DependencyView {
             startButton.setDisable(false);
             selectDirectoryButton.setDisable(false);
             stopButton.setDisable(true);
-            this.analyzedClassCounterLabel.setText(ANALYZED_CLASSES_LABEL);
+            this.analyzedProjectClassCounterLabel.setText(ANALYZED_CLASSES_LABEL);
+            this.externalClassesCounterLabel.setText(EXTERNAL_CLASSES_LABEL);
             this.foundDependencyCounterLabel.setText(FOUND_DEPENDENCIES_LABEL);
         });
     }
