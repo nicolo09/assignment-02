@@ -93,7 +93,7 @@ public class DependencyController {
                 view.stopAnalysis();
             });
         } else {
-            view.showError("Please select a project directory first.");
+            throw new IllegalStateException("Project directory not set");
         }
     }
 

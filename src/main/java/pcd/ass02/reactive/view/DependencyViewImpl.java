@@ -59,6 +59,9 @@ public class DependencyViewImpl implements DependencyView {
         this.primaryStage = primaryStage;
         this.dependenciesGraph = dependenciesGraph;
         this.graph = new DependenciesDigraphWrapper(dependenciesGraph);
+        primaryStage.setOnCloseRequest(event -> {
+            controller.stopAnalysis();
+        });
     }
 
     public void setController(final DependencyController controller) {
@@ -102,10 +105,14 @@ public class DependencyViewImpl implements DependencyView {
         this.startButton = new Button("Start");
         this.startButton.setMinSize(Button.USE_PREF_SIZE, Button.USE_PREF_SIZE); // Disable resizing below elision
         this.startButton.setOnAction(event -> {
-            this.startButton.setDisable(true);
-            this.selectDirectoryButton.setDisable(true);
-            this.stopButton.setDisable(false);
-            controller.startAnalysis();
+            try {
+                controller.startAnalysis();
+                this.startButton.setDisable(true);
+                this.selectDirectoryButton.setDisable(true);
+                this.stopButton.setDisable(false);
+            } catch (Exception e) {
+                this.showError("Error starting analysis: " + e.getMessage());
+            }
         });
 
         CheckBox autoLayoutCheckBox = new CheckBox("Auto Layout");
