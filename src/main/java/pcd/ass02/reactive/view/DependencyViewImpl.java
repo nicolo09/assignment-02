@@ -184,6 +184,8 @@ public class DependencyViewImpl implements DependencyView {
             startButton.setDisable(false);
             selectDirectoryButton.setDisable(false);
             stopButton.setDisable(true);
+            this.analyzedClassCounterLabel.setText(ANALYZED_CLASSES_LABEL);
+            this.foundDependencyCounterLabel.setText(FOUND_DEPENDENCIES_LABEL);
         });
     }
 

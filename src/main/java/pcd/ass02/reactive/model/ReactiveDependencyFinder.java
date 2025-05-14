@@ -68,8 +68,7 @@ public class ReactiveDependencyFinder {
                     emitter.onError(e);
                 }
 
-                // Dopo aver processato tutti i file, continiamo a controllare per nuovi
-                // file o modifiche di quelli esistenti
+                // After processing all files, continue to monitor for new files or modifications to existing ones
                 try (WatchService ws = FileSystems.getDefault().newWatchService()) {
                     projectDirectory.register(ws,
                             new WatchEvent.Kind[] { ENTRY_MODIFY, ENTRY_CREATE, ENTRY_DELETE },
@@ -81,6 +80,7 @@ public class ReactiveDependencyFinder {
                         for (WatchEvent<?> event : k.pollEvents()) {
                             Object classObject = event.context();
                             LOGGER.info(event.kind().toString() + " " + event.count() + " " + classObject);
+                            // Check if the file that caused the event is for a class file
                             if (classObject.toString().endsWith(FILE_EXTENSION)) {
                                 var classFile = Path.of(projectDirectory + File.separator + classObject.toString());
                                 var changeType = event.kind() == ENTRY_CREATE
@@ -89,14 +89,13 @@ public class ReactiveDependencyFinder {
                                                 ? DependencyChangeType.MODIFY
                                                 : DependencyChangeType.DELETE;
                                 try {
-                                    // nodo dipende da esso (limitatamente a dipendenze esternerne)
-                                    // il rename viene considerato come delete del file originale e creazione di un
-                                    // nuovo file
                                     if (changeType != DependencyChangeType.DELETE) {
+                                        // Process the file and get the dependencies
                                         Entry<String, Set<String>> dependency = getClassDependencies(classFile);
                                         LOGGER.info("Found dependencies of: " + dependency.getKey());
                                         emitter.onNext(new ClassDependencyInfo(dependency, changeType, classFile));
                                     } else {
+                                        // If the file was deleted, emit a null dependency
                                         LOGGER.info("Class: " + classObject.toString() + " has been deleted");
                                         emitter.onNext(new ClassDependencyInfo(null, changeType, classFile));
                                     }
