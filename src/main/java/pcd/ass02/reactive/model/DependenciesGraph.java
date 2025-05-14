@@ -63,11 +63,10 @@ public class DependenciesGraph {
     }
 
     public Map<String, Set<String>> getAllDependencies() {
-        return dependencies;
+        return Map.copyOf(dependencies);
     }
 
     public void empty() {
         dependencies.clear();
     }
-
 }
