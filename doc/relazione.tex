@@ -40,20 +40,64 @@ L'assignment riguarda la creazione di due artefatti differenti: una libreria per
 reattiva per la visualizzazione delle dipendenze di progetti Java.
 
 \section{Versione asincrona}
-//TODO: scrivere meglio parte di analisi del problema
-Il problema principale della versione asincrona riguarda l'analisi dei file \texttt{.java}, in particolare è importante che le letture da file non blocchino il sistema e che vengano
-eseguite concorrentemente al flusso del programma per evitare di bloccare il sistema.
+%//TODO: scrivere meglio parte di analisi del problema
+Il problema principale della versione asincrona riguarda l'accesso in lettura ai file \texttt{.java}, in particolare è importante che le letture da file non blocchino 
+il sistema e che vengano eseguite concorrentemente per evitare di bloccare il flusso principale del programma.
 
-Per la libreria è stato utilizzato il framework \texttt{Vertx} che offre supporto alla creazione di sistemi asincroni. In particolare la libreria è formata da un oggetto 
-\texttt{DependencyAnalyzer} che si occupa di analizzare i file \texttt{.java} e di restituire le dipendenze in modo asincrono. Fornisce tre metodi principali:
+Per l'implementazione della libreria è stato utilizzato il framework \texttt{Vertx} che offre supporto alla creazione di sistemi asincroni. In particolare la libreria è formata 
+da un oggetto \texttt{DependencyAnalyzer} che si occupa di analizzare i file \texttt{.java} e di restituire le dipendenze in modo asincrono. Fornisce tre metodi principali:
 \begin{itemize}
     \item \texttt{getClassDependencies}: cerca le dipendenze di una classe
     \item \texttt{getPackageDependencies}: cerca le dipendenze che le classi di un package hanno verso tipi esterni ad esso
     \item \texttt{getProjectDependencies}: cerca le dipendenze che le classi di un progetto hanno verso tipi esterni ad esso
 \end{itemize}
-Ogni metodo ritorna un Future generico sul tipo di report che il metodo produce
+Ogni metodo ritorna un Future generico sul tipo di report che il metodo produce.
 
-\section{Conclusioni}
+La ricerca per le classi è stata implementata utilizzando i metodi di accesso al filesystem messi a disposizione dall'oggetto \texttt{FileSystem} di Vertx, che 
+permette di eseguire operazioni non bloccanti, e concatenando a queste le operazioni di parsing e analisi dei file.
+%//TODO: scrivere dell'istanza di Vertx
 
+Per i package e i progetti è stato necessario implementare un metodo di ricerca ricorsiva che, partendo dalla directory principale del progetto, analizza i file \texttt{.java}
+raccogliendo con un \texttt{Future.all} i risultati asincroni dell'analisi delle classi e dei sotto-package.
+
+Per evitare di fornire risultati parziali e quindi incorretti qualunque problema durante l'analisi di un file \texttt{.java} causa il fallimento dell'intera operazione 
+e quindi del relativo \texttt{Future}.
+
+\subsection{Utilizzo versione asincrona}
+Per provare la versione asincrona è necessario avviare il metodo main della classe \texttt{pcd.ass02.async.VertxApp} con i parametri:
+\begin{itemize}
+    \item \texttt{--class [class file path]}: per analizzare una singola classe
+    \item \texttt{--package [package folder path]}: per analizzare un package
+    \item \texttt{--project [project folder path]}: per analizzare un progetto
+\end{itemize}
+
+\section{Versione reattiva}
+Mentre nell'approccio asincrono il main si preoccupa di mettere in coda delle task da eseguire e di gestire il loro completamento (o fallimento) in qualche modo, 
+l'approccio reattivo si differenzia nel fatto che si ha un componente osservabile che continua a eseguire in background e il flusso principale del programma deve 
+occuparsi di reagire in qualche modo agli eventi che questo osservabile fa scattare. 
+
+Deve inoltre, essendo i nostri osservabili infiniti, occuparsi di farlo terminare al momento opportuno. L'analisi delle dipendenze in questo caso è perciò affidata 
+all'esecuzione di un \texttt{Observable} di tipo cold che istanzia un nuovo thread, questo si occupa al suo avvio di cercare le dipendenze in background nei file 
+e inviare un nuovo oggetto dependency ogni volta che ne trova una, una volta esplorati tutti i file il thread si mette in osservazione della cartella di progetto
+selezionata per eventuali cambiamenti e in caso di modifiche ai sorgenti li rianalizza e notifica la view del cambiamento che si occupa di aggiornare il grafo, 
+permettendo così di reagire in tempo reale a modifiche dei file. 
+
+La ricerca avviene chiamando sull'oggetto \texttt{ReactiveDependencyFinder} il metodo \\
+\texttt{findAllClassesDependencies} che restituisce un \texttt{Observable} che emette un oggetto \\
+\texttt{ClassDependencyInfo} ogni volta che trova una dipendenza o che una dipendenza già notificata varia.
+
+Il controller mantiene un grafo delle dipendenze come oggetto \texttt{DependenciesGraph} e la view lo disegna (tramite un oggetto wrapper per compatibilità con la libreria grafica)
+ogni volta che il controller riceve una notifica di cambiamento dall'observable.
+
+La versione reattiva mostra inoltre le classi totali analizzate e il numero di dipendenze trovate, si può inoltre fermare l'analisi reattiva con un apposito pulsante che causa la
+terminazione del thread di analisi e la chiusura dell'osservabile.
+
+\subsection{Utilizzo versione reattiva}
+
+Per utilizzare la versione reattiva è necessario avviare il metodo main della classe \texttt{pcd.ass02.reactive.ReactiveApp} e scegliere una cartella di progetto con il tasto 
+\texttt{Select directory}.
+A questo punto è possibile avviare l'analisi con il tasto \texttt{Start} e verrà mostrato il grafo delle dipendenze mantenendo l'analisi reattiva fino a quando non si preme 
+il tasto \texttt{Stop} o non si chiude il programma.
+È inoltre possibile attivare o disattivare l'auto layout del grafo con l'apposita checkbox.
 
 \end{document}
