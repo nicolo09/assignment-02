@@ -35,6 +35,9 @@ public class DependencyViewImpl implements DependencyView {
     private static final int TOP_HEIGHT_FRAC = 10;
     private static final boolean RESIZABLE = true;
 
+    private static final String ANALYZED_CLASSES_LABEL = "Analyzed classes: ";
+    private static final String FOUND_DEPENDENCIES_LABEL = "Found dependencies: ";
+
     private final Stage primaryStage;
     private BorderPane rootBorderPane;
     private SmartGraphPanel<String, String> graphView;
@@ -43,6 +46,8 @@ public class DependencyViewImpl implements DependencyView {
     private Button selectDirectoryButton;
     private Button stopButton;
     private Label selectedDirectoryLabel;
+    private Label analyzedClassCounterLabel;
+    private Label foundDependencyCounterLabel;
 
     private DependencyController controller;
 
@@ -110,8 +115,14 @@ public class DependencyViewImpl implements DependencyView {
             });
         });
 
+        //Analyzed class counter label
+        this.analyzedClassCounterLabel = new Label(ANALYZED_CLASSES_LABEL);
+
+        //Found dependency counter label
+        this.foundDependencyCounterLabel = new Label(FOUND_DEPENDENCIES_LABEL);
+
         // Top panel
-        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, startButton, stopButton, autoLayoutCheckBox);
+        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, startButton, stopButton, autoLayoutCheckBox, analyzedClassCounterLabel, foundDependencyCounterLabel);
         top.setPadding(new Insets(15, 12, 15, 12));
         top.setSpacing(10);
         top.setAlignment(javafx.geometry.Pos.CENTER);
@@ -151,7 +162,18 @@ public class DependencyViewImpl implements DependencyView {
     public void updateDependencyGraph() {
         Platform.runLater(() -> {
             graphView.update();
-            dependenciesGraph.getAllDependencies().keySet().forEach(v-> graphView.getStylableVertex(v).setStyleClass("projectVertex"));
+            dependenciesGraph.getAllDependencies().keySet().forEach(v -> { 
+                var vertex = graphView.getStylableVertex(v);
+                if (vertex != null) {
+                    vertex.setStyleClass("projectVertex");
+                }
+            });
+            this.analyzedClassCounterLabel.setText(ANALYZED_CLASSES_LABEL + dependenciesGraph.getAllDependencies().keySet().size());
+            var distinctDependencies = dependenciesGraph.getAllDependencies().values().stream()
+                .flatMap(set -> set.stream())
+                .distinct() //TODO: distinct or not?
+                .count();
+            this.foundDependencyCounterLabel.setText(FOUND_DEPENDENCIES_LABEL + distinctDependencies);
         });
     }
 
