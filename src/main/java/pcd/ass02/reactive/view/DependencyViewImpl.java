@@ -1,7 +1,7 @@
 package pcd.ass02.reactive.view;
 
 import com.brunomnsilva.smartgraph.graph.Digraph;
-import com.brunomnsilva.smartgraph.graphview.ForceDirectedSpringSystemLayoutStrategy;
+import com.brunomnsilva.smartgraph.graphview.ForceDirectedSpringGravityLayoutStrategy;
 import com.brunomnsilva.smartgraph.graphview.SmartCircularSortedPlacementStrategy;
 import com.brunomnsilva.smartgraph.graphview.SmartGraphPanel;
 import com.brunomnsilva.smartgraph.graphview.SmartPlacementStrategy;
@@ -31,6 +31,7 @@ public class DependencyViewImpl implements DependencyView {
     private static final double ACCELERATION = 0.6;
     private static final double GRAPH_WIDTH = 4000;
     private static final double GRAPH_HEIGHT = 4000;
+    private static final double GRAVITY = 0.001;
 
     private static final String TITLE = "Dependency Analyzer";
     private static final int WIDTH = 800;
@@ -85,8 +86,8 @@ public class DependencyViewImpl implements DependencyView {
         // Graph view
         SmartPlacementStrategy initialPlacement = new SmartCircularSortedPlacementStrategy();
         this.graphView = new SmartGraphPanel<>(graph, initialPlacement);
-        this.graphView.setAutomaticLayoutStrategy(new ForceDirectedSpringSystemLayoutStrategy<String>(REPULSIVE_FORCE,
-                ATTRACTION_FORCE, ATTRACTION_SCALE, ACCELERATION));
+        this.graphView.setAutomaticLayoutStrategy(new ForceDirectedSpringGravityLayoutStrategy<String>(REPULSIVE_FORCE,
+                ATTRACTION_FORCE, ATTRACTION_SCALE, ACCELERATION, GRAVITY));
         this.graphView.setAutomaticLayout(true);
 
         var zoomableGraph = new ZoomableSmartGraphPane(graphView);
