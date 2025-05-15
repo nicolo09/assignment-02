@@ -40,7 +40,6 @@ L'assignment riguarda la creazione di due artefatti differenti: una libreria per
 reattiva per la visualizzazione delle dipendenze di progetti Java.
 
 \section{Versione asincrona}
-%//TODO: scrivere meglio parte di analisi del problema
 Il problema principale della versione asincrona riguarda l'accesso in lettura ai file \texttt{.java}, in particolare è importante che le letture da file non blocchino 
 il sistema e che vengano eseguite concorrentemente per evitare di bloccare il flusso principale del programma.
 
@@ -130,6 +129,13 @@ alla piazza \texttt{P3}. La transizione T1 rappresenta la gestione dell'evento e
 termina e si ritorna allo stato iniziale (piazza \texttt{P4}) svuotando inoltre la piazza \texttt{P3}.
 
 \subsection{Utilizzo versione reattiva}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{Dependecies_graph_mock.png}
+    \caption{Esempio di grafo delle dipendenze}
+    \label{fig:reactive-screenshot}
+\end{figure}
 
 Per utilizzare la versione reattiva è necessario avviare il metodo main della classe \\
 \texttt{pcd.ass02.reactive.ReactiveApp} e scegliere una cartella di progetto con il tasto \texttt{Select directory}.
