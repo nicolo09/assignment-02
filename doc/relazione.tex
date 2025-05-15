@@ -68,6 +68,20 @@ raccogliendo con un \texttt{Future.all} i risultati asincroni dell'analisi delle
 Per evitare di fornire risultati parziali e quindi incorretti qualunque problema durante l'analisi di un file \texttt{.java} causa il fallimento dell'intera operazione 
 e quindi del relativo \texttt{Future}.
 
+\subsection{Rete di Petri}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Petri_async.png}
+    \caption{Petri net per la versione asincrona}
+    \label{fig:rete-petri-asincrona}
+\end{figure}
+
+La rete di Petri per la versione asincrona è composta da una piazza iniziale che rappresenta l'inizio dell'analisi, da qui la transizione \texttt{T0} avvia l'analisi della classe
+che prosegue asincronicamente nella piazza \texttt{P2}, mentre il main prosegue in \texttt{P1} e continua con la sua computazione. Una volta completata l'analisi 
+(transizione \texttt{T2}) il risultato è pronto per essere gestito (piazza \texttt{P3}) e viene gestito nella transizione \texttt{T1} che porta alla conclusione 
+della computazione asincrona (piazza \texttt{P4}).
+
 \subsection{Utilizzo versione asincrona}
 Per provare la versione asincrona è necessario avviare il metodo main della classe \texttt{pcd.ass02.async.VertxApp} con i parametri:
 \begin{itemize}
@@ -94,8 +108,26 @@ La ricerca avviene chiamando sull'oggetto \texttt{ReactiveDependencyFinder} il m
 Il controller mantiene un grafo delle dipendenze come oggetto \texttt{DependenciesGraph} e la view lo disegna (tramite un oggetto wrapper per compatibilità con la libreria grafica)
 ogni volta che il controller riceve una notifica di cambiamento dall'observable.
 
-La versione reattiva mostra inoltre le classi totali analizzate e il numero di dipendenze trovate, si può inoltre fermare l'analisi reattiva con un apposito pulsante che causa la
+La view è implementata in \texttt{JavaFX} e mostra il grafo delle dipendenze sfruttando la libreria \texttt{JavaFX Smart Graph}\footnote{\url{https://github.com/brunomnsilva/JavaFXSmartGraph}}.
+Il grafo è composto da nodi di colore rosso che rappresentano le classi di progetto, nodi di colore blu che rappresentano le classi esterne su cui sono presenti dipendenze e archi orientati
+che collegano le classi alle loro dipendenze.
+
+Mostra inoltre le classi totali analizzate e il numero di dipendenze trovate, si può inoltre fermare l'analisi reattiva con un apposito pulsante che causa la
 terminazione del thread di analisi e la chiusura dell'osservabile.
+
+\subsection{Rete di Petri}
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.7\textwidth]{Petri_reactive.png}
+    \caption{Petri net per la versione reattiva}
+    \label{fig:rete-petri-reattiva}
+\end{figure}
+
+La rete di Petri per la versione reattiva è composta da una piazza iniziale \texttt{P0} che rappresenta l'avvio dell'analisi, da qui la transizione \texttt{T0} avvia l'analisi del progetto
+in background. Il main prosegue in \texttt{P1} e continua con le sue computazioni, intanto l'analisi prosegue in \texttt{P2} e quando trova una dipendenza la notifica (transizione \texttt{T2})
+alla piazza \texttt{P3}. La transizione T1 rappresenta la gestione dell'evento e l'aggiornamento della view. Infine una volta fermata l'analisi (transizione \texttt{T3}) il thread di analisi 
+termina e si ritorna allo stato iniziale (piazza \texttt{P4}) svuotando inoltre la piazza \texttt{P3}.
 
 \subsection{Utilizzo versione reattiva}
 
