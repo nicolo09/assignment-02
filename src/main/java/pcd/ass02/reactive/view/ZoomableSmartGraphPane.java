@@ -10,6 +10,9 @@ import javafx.scene.control.ScrollPane;
 import javafx.scene.input.ScrollEvent;
 import javafx.scene.layout.StackPane;
 
+/**
+ * A pane that allows zooming of a SmartGraphPanel.
+ */
 public class ZoomableSmartGraphPane extends StackPane {
 
     private final SmartGraphPanel<String, String> graphView;
@@ -47,7 +50,7 @@ public class ZoomableSmartGraphPane extends StackPane {
 
                 double factor = (event.getDeltaY() > 0) ? ZOOM_FACTOR : 1 / ZOOM_FACTOR;
 
-                // Mouse nella scena → coordinate locali nel grafo
+                // Mouse in scene to local coordinates in the graph
                 Point2D mouseInGraph = graphView.sceneToLocal(event.getSceneX(), event.getSceneY());
 
                 zoomToPoint(factor, mouseInGraph);
@@ -59,10 +62,10 @@ public class ZoomableSmartGraphPane extends StackPane {
         double viewportWidth = scrollPane.getViewportBounds().getWidth();
         double viewportHeight = scrollPane.getViewportBounds().getHeight();
 
-        // Punto centrale visibile nella viewport, in coordinate del ScrollPane
+        // Center point visible in the viewport, in ScrollPane coordinates
         Point2D centerInScrollPane = new Point2D(viewportWidth / 2, viewportHeight / 2);
 
-        // Converti alle coordinate del grafo
+        // Convert to graph coordinates
         Point2D centerInGraph = graphView.sceneToLocal(
                 scrollPane.localToScene(centerInScrollPane));
 

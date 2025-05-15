@@ -171,6 +171,9 @@ public class ReactiveDependencyFinder {
 
             var fullyQualifiedName = packageName.isEmpty() ? className : packageName + "." + className;
 
+            // Remove itself from the dependencies
+            dependencies.remove(fullyQualifiedName);
+
             return new AbstractMap.SimpleImmutableEntry<String, Set<String>>(fullyQualifiedName, dependencies);
         } catch (Exception e) {
             LOGGER.error("Error processing class file: " + classFile, e);
