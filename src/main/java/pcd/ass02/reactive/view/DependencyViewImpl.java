@@ -29,6 +29,8 @@ public class DependencyViewImpl implements DependencyView {
     private static final double ATTRACTION_FORCE = 1;
     private static final double ATTRACTION_SCALE = 3;
     private static final double ACCELERATION = 0.6;
+    private static final double GRAPH_WIDTH = 4000;
+    private static final double GRAPH_HEIGHT = 4000;
 
     private static final String TITLE = "Dependency Analyzer";
     private static final int WIDTH = 800;
@@ -79,6 +81,17 @@ public class DependencyViewImpl implements DependencyView {
     }
 
     private Scene getMainScene() {
+
+        // Graph view
+        SmartPlacementStrategy initialPlacement = new SmartCircularSortedPlacementStrategy();
+        this.graphView = new SmartGraphPanel<>(graph, initialPlacement);
+        this.graphView.setAutomaticLayoutStrategy(new ForceDirectedSpringSystemLayoutStrategy<String>(REPULSIVE_FORCE,
+                ATTRACTION_FORCE, ATTRACTION_SCALE, ACCELERATION));
+        this.graphView.setAutomaticLayout(true);
+
+        var zoomableGraph = new ZoomableSmartGraphPane(graphView);
+        zoomableGraph.setGraphSize(GRAPH_WIDTH, GRAPH_HEIGHT);
+
         // Selected directory label
         selectedDirectoryLabel = new Label("Selected Directory: ");
 
@@ -107,6 +120,8 @@ public class DependencyViewImpl implements DependencyView {
         this.startButton.setOnAction(event -> {
             try {
                 controller.startAnalysis();
+                zoomableGraph.centerGraph();
+                zoomableGraph.resetZoom();
                 this.startButton.setDisable(true);
                 this.selectDirectoryButton.setDisable(true);
                 this.stopButton.setDisable(false);
@@ -114,6 +129,22 @@ public class DependencyViewImpl implements DependencyView {
                 this.showError("Error starting analysis: " + e.getMessage());
             }
         });
+
+        VBox buttonsBox = new VBox(startButton, stopButton);
+        buttonsBox.setSpacing(5);
+        buttonsBox.setAlignment(javafx.geometry.Pos.CENTER);
+
+        // Zoom in button
+        Button zoomInButton = new Button("Zoom In");
+        zoomInButton.setOnAction(zoomableGraph.getZoomInHandler());
+        
+        // Zoom out button
+        Button zoomOutButton = new Button("Zoom Out");
+        zoomOutButton.setOnAction(zoomableGraph.getZoomOutHandler());
+
+        VBox zoomButtonsBox = new VBox(zoomInButton, zoomOutButton);
+        zoomButtonsBox.setSpacing(5);
+        zoomButtonsBox.setAlignment(javafx.geometry.Pos.CENTER);
 
         CheckBox autoLayoutCheckBox = new CheckBox("Auto Layout");
         autoLayoutCheckBox.setSelected(true);
@@ -136,31 +167,25 @@ public class DependencyViewImpl implements DependencyView {
         // Found dependency counter label
         this.foundDependencyCounterLabel = new Label(FOUND_DEPENDENCIES_LABEL);
 
-        VBox vbox = new VBox(this.analyzedProjectClassCounterLabel, this.externalClassesCounterLabel,
+        VBox labelsBox = new VBox(this.analyzedProjectClassCounterLabel, this.externalClassesCounterLabel,
                 this.foundDependencyCounterLabel);
-        vbox.setPadding(new Insets(15, 12, 15, 12));
-        vbox.setMinWidth(ACCELERATION);
+        labelsBox.setPadding(new Insets(10, 12, 10, 12));
 
         // Top panel
-        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, startButton, stopButton, autoLayoutCheckBox,
-                vbox);
+        HBox top = new HBox(selectedDirectoryLabel, selectDirectoryButton, buttonsBox, zoomButtonsBox,
+                autoLayoutCheckBox,
+                labelsBox);
         top.setPadding(new Insets(15, 12, 15, 12));
         top.setSpacing(10);
         top.setAlignment(javafx.geometry.Pos.CENTER);
         top.setPrefSize(WIDTH, HEIGHT / TOP_HEIGHT_FRAC);
-
-        SmartPlacementStrategy initialPlacement = new SmartCircularSortedPlacementStrategy();
-        this.graphView = new SmartGraphPanel<>(graph, initialPlacement);
-        this.graphView.setAutomaticLayoutStrategy(new ForceDirectedSpringSystemLayoutStrategy<String>(REPULSIVE_FORCE,
-                ATTRACTION_FORCE, ATTRACTION_SCALE, ACCELERATION));
-        this.graphView.setAutomaticLayout(true);
 
         // Main border pane
         rootBorderPane = new BorderPane();
         rootBorderPane.setPadding(new Insets(10, 10, 10, 10));
         rootBorderPane.setPrefSize(WIDTH, HEIGHT);
         rootBorderPane.setTop(top);
-        rootBorderPane.setCenter(graphView);
+        rootBorderPane.setCenter(zoomableGraph);
 
         // Create the root node
         Scene scene = new Scene(rootBorderPane);
