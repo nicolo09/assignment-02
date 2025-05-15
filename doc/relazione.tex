@@ -55,7 +55,12 @@ Ogni metodo ritorna un Future generico sul tipo di report che il metodo produce.
 
 La ricerca per le classi è stata implementata utilizzando i metodi di accesso al filesystem messi a disposizione dall'oggetto \texttt{FileSystem} di Vertx, che 
 permette di eseguire operazioni non bloccanti, e concatenando a queste le operazioni di parsing e analisi dei file.
-%//TODO: scrivere dell'istanza di Vertx
+
+Trattandosi di una libreria non sappiamo a priori il contesto all'interno del quale verrà eseguito il codice, per questo abbiamo deciso di non effettuare il deploy di
+un oggetto \texttt{Verticle} ma di lasciare la scelta all'utente. Questo da flessibilità alla libreria ma non permette di sapere a priori quale istanza di Vertx verrà utilizzata.
+Per questo abbiamo lasciato la possibilità di passare un oggetto \texttt{Vertx} al costruttore dell'oggetto, nel caso in cui questo non venga fatto e venga utilizzato il costruttore
+di default, si cerca di recuperare l'oggetto \texttt{Vertx} corrente tramite il metodo \texttt{Vertx.currentContext()} e infine se non esiste un contesto corrente si crea un nuovo
+oggetto con chiamata a \texttt{Vertx.vertx()}.
 
 Per i package e i progetti è stato necessario implementare un metodo di ricerca ricorsiva che, partendo dalla directory principale del progetto, analizza i file \texttt{.java}
 raccogliendo con un \texttt{Future.all} i risultati asincroni dell'analisi delle classi e dei sotto-package.
@@ -94,10 +99,10 @@ terminazione del thread di analisi e la chiusura dell'osservabile.
 
 \subsection{Utilizzo versione reattiva}
 
-Per utilizzare la versione reattiva è necessario avviare il metodo main della classe \texttt{pcd.ass02.reactive.ReactiveApp} e scegliere una cartella di progetto con il tasto 
-\texttt{Select directory}.
+Per utilizzare la versione reattiva è necessario avviare il metodo main della classe \\
+\texttt{pcd.ass02.reactive.ReactiveApp} e scegliere una cartella di progetto con il tasto \texttt{Select directory}.
 A questo punto è possibile avviare l'analisi con il tasto \texttt{Start} e verrà mostrato il grafo delle dipendenze mantenendo l'analisi reattiva fino a quando non si preme 
 il tasto \texttt{Stop} o non si chiude il programma.
-È inoltre possibile attivare o disattivare l'auto layout del grafo con l'apposita checkbox.
+È inoltre possibile attivare o disattivare l'auto layout del grafo con l'apposita checkbox, effettuare lo zoom utilizzando CTRL+scroll e spostare il grafo con il mouse.
 
 \end{document}
